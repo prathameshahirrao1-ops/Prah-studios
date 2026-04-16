@@ -41,6 +41,8 @@ export function JourneyScreen() {
   const [hwOpen, setHwOpen] = useState<HwSubmissionContext | null>(null);
   // HW tasks (and their owning sessions) submitted during this browsing session.
   const [submittedSessionIds, setSubmittedSessionIds] = useState<Set<string>>(new Set());
+  // The task ID to celebrate (just submitted) — cleared after the animation finishes.
+  const [celebrateTaskId, setCelebrateTaskId] = useState<string | null>(null);
 
   const openHwForTask = (t: TimelineTask) => {
     // Prefer the task's explicit sessionId; otherwise match by same-date attended session.
@@ -61,6 +63,16 @@ export function JourneyScreen() {
       next.add(sessionId);
       return next;
     });
+    // Start the celebration after the popup has auto-closed (~1.4s) so the user
+    // actually sees the glow appear on the timeline card, not while the sheet
+    // is still covering it.
+    const task = mockTasks.find((t) => t.kind === 'hw' && t.sessionId === sessionId);
+    if (task) {
+      // Start celebration after the popup finishes auto-closing (~1.4s).
+      setTimeout(() => setCelebrateTaskId(task.id), 1500);
+      // Animation ~2.22s (glow 320 + hold 1400 + fade 500). Clear a bit after that.
+      setTimeout(() => setCelebrateTaskId(null), 4000);
+    }
   };
 
   // Task IDs whose owning session was just submitted — show them as Completed in timeline.
@@ -114,6 +126,7 @@ export function JourneyScreen() {
               onTapSession={(sess) => setSessionOpen(sess)}
               onTapHwTask={openHwForTask}
               extraCompletedTaskIds={completedTaskIds}
+              justSubmittedHwTaskId={celebrateTaskId}
             />
           )}
           {active === 'peers' && <PeersTab onTapPeer={(p) => setPeerOpen(p)} />}
