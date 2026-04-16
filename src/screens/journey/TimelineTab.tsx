@@ -20,6 +20,8 @@ interface Props {
   extraCompletedTaskIds?: Set<string>;
   /** The HW task that was JUST submitted — plays the celebration animation. */
   justSubmittedHwTaskId?: string | null;
+  /** Tap on "Not there on this day?" on an upcoming session card. */
+  onTapNotThere?: (session: TimelineSession) => void;
 }
 
 /** Merge + sort sessions and tasks by date into a single timeline stream. */
@@ -64,6 +66,7 @@ export function TimelineTab({
   onTapHwTask,
   extraCompletedTaskIds,
   justSubmittedHwTaskId,
+  onTapNotThere,
 }: Props) {
   const groups = buildGroups();
   return (
@@ -78,6 +81,7 @@ export function TimelineTab({
           onTapHwTask={onTapHwTask}
           extraCompletedTaskIds={extraCompletedTaskIds}
           justSubmittedHwTaskId={justSubmittedHwTaskId}
+          onTapNotThere={onTapNotThere}
         />
       ))}
     </View>
@@ -92,6 +96,7 @@ function TimelineRow({
   onTapHwTask,
   extraCompletedTaskIds,
   justSubmittedHwTaskId,
+  onTapNotThere,
 }: {
   group: Group;
   isFirst: boolean;
@@ -100,6 +105,7 @@ function TimelineRow({
   onTapHwTask: (t: TimelineTask) => void;
   extraCompletedTaskIds?: Set<string>;
   justSubmittedHwTaskId?: string | null;
+  onTapNotThere?: (s: TimelineSession) => void;
 }) {
   const dateLabel = formatShortDate(group.date);
   const nodeVariant =
@@ -131,7 +137,13 @@ function TimelineRow({
         </Text>
 
         {group.kind === 'session' ? (
-          <SessionCard session={group.session} onPress={() => onTapSession(group.session)} />
+          <SessionCard
+            session={group.session}
+            onPress={() => onTapSession(group.session)}
+            onPressNotThere={
+              onTapNotThere ? () => onTapNotThere(group.session) : undefined
+            }
+          />
         ) : (
           <View style={styles.taskStack}>
             {group.tasks.map((t) => {
@@ -173,9 +185,11 @@ function NodeDot({ variant }: { variant: 'filled' | 'missed' | 'upcoming' | 'tas
 function SessionCard({
   session,
   onPress,
+  onPressNotThere,
 }: {
   session: TimelineSession;
   onPress: () => void;
+  onPressNotThere?: () => void;
 }) {
   if (session.status === 'upcoming') {
     return (
@@ -184,12 +198,16 @@ function SessionCard({
         <Text variant="small" tone="muted" style={{ marginTop: 4 }}>
           Information will be visible on class day
         </Text>
-        <View style={styles.notHereRow}>
+        <Pressable
+          onPress={onPressNotThere}
+          disabled={!onPressNotThere}
+          style={({ pressed }) => [styles.notHereRow, pressed && { opacity: 0.7 }]}
+        >
           <Text variant="small" tone="secondary">
             Not there on this day?
           </Text>
           <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-        </View>
+        </Pressable>
       </Card>
     );
   }

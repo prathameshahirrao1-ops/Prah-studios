@@ -1,23 +1,30 @@
-import React from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import React, { useState } from 'react';
+import { Modal, ScrollView, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '../components/Screen';
 import { Text } from '../components/Text';
 import { Card } from '../components/Card';
 import { colors, spacing } from '../theme';
 import { mockStudent } from '../data/mockStudent';
+import { ChatScreen } from './ChatScreen';
 
 const ROWS = [
   { key: 'account', label: 'Account details', icon: 'person-circle-outline' as const },
   { key: 'works', label: 'All my works', icon: 'images-outline' as const },
   { key: 'journeys', label: 'Journeys', icon: 'compass-outline' as const },
   { key: 'billing', label: 'Billing history', icon: 'receipt-outline' as const },
-  { key: 'support', label: 'Support & feedback', icon: 'help-circle-outline' as const },
+  { key: 'support', label: 'Chat with teacher', icon: 'chatbubbles-outline' as const },
   { key: 'settings', label: 'Settings', icon: 'settings-outline' as const },
 ];
 
 export function ProfileScreen() {
   const s = mockStudent;
+  const [chatOpen, setChatOpen] = useState(false);
+
+  const onRowPress = (key: string) => {
+    if (key === 'support') setChatOpen(true);
+  };
+
   return (
     <Screen padded={false}>
       <ScrollView contentContainerStyle={styles.scroll}>
@@ -37,7 +44,12 @@ export function ProfileScreen() {
 
         <View style={styles.list}>
           {ROWS.map((r) => (
-            <Card key={r.key} compact onPress={() => {}} style={styles.row}>
+            <Card
+              key={r.key}
+              compact
+              onPress={() => onRowPress(r.key)}
+              style={styles.row}
+            >
               <Ionicons name={r.icon} size={22} color={colors.textPrimary} />
               <Text variant="bodyBold" style={{ flex: 1, marginLeft: spacing.md }}>
                 {r.label}
@@ -47,6 +59,15 @@ export function ProfileScreen() {
           ))}
         </View>
       </ScrollView>
+
+      <Modal
+        visible={chatOpen}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={() => setChatOpen(false)}
+      >
+        <ChatScreen onClose={() => setChatOpen(false)} />
+      </Modal>
     </Screen>
   );
 }

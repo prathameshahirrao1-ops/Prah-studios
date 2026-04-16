@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Modal, ScrollView, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '../components/Screen';
 import { Text } from '../components/Text';
@@ -24,6 +24,7 @@ import {
   HwSubmissionPopup,
   HwSubmissionContext,
 } from './journey/HwSubmissionPopup';
+import { ChatScreen } from './ChatScreen';
 
 type SubKey = 'timeline' | 'peers' | 'mywork';
 
@@ -43,6 +44,7 @@ export function JourneyScreen() {
   const [submittedSessionIds, setSubmittedSessionIds] = useState<Set<string>>(new Set());
   // The task ID to celebrate (just submitted) — cleared after the animation finishes.
   const [celebrateTaskId, setCelebrateTaskId] = useState<string | null>(null);
+  const [chatOpen, setChatOpen] = useState(false);
 
   const openHwForTask = (t: TimelineTask) => {
     // Prefer the task's explicit sessionId; otherwise match by same-date attended session.
@@ -127,6 +129,7 @@ export function JourneyScreen() {
               onTapHwTask={openHwForTask}
               extraCompletedTaskIds={completedTaskIds}
               justSubmittedHwTaskId={celebrateTaskId}
+              onTapNotThere={() => setChatOpen(true)}
             />
           )}
           {active === 'peers' && <PeersTab onTapPeer={(p) => setPeerOpen(p)} />}
@@ -141,6 +144,15 @@ export function JourneyScreen() {
         onClose={() => setHwOpen(null)}
         onSubmitted={onHwSubmitted}
       />
+
+      <Modal
+        visible={chatOpen}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={() => setChatOpen(false)}
+      >
+        <ChatScreen onClose={() => setChatOpen(false)} />
+      </Modal>
     </Screen>
   );
 }
