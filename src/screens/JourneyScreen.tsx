@@ -18,6 +18,11 @@ import { PeersTab } from './journey/PeersTab';
 import { MyWorkTab } from './journey/MyWorkTab';
 import { SessionPopup } from './journey/SessionPopup';
 import { PeerPopup } from './journey/PeerPopup';
+import {
+  HwSubmissionPopup,
+  HwSubmissionContext,
+} from './journey/HwSubmissionPopup';
+import { mockTimeline } from '../data/mockStudent';
 
 type SubKey = 'timeline' | 'peers' | 'mywork';
 
@@ -32,6 +37,16 @@ export function JourneyScreen() {
   const [active, setActive] = useState<SubKey>('timeline');
   const [sessionOpen, setSessionOpen] = useState<TimelineSession | null>(null);
   const [peerOpen, setPeerOpen] = useState<Peer | null>(null);
+  const [hwOpen, setHwOpen] = useState<HwSubmissionContext | null>(null);
+
+  const openHwForTask = (t: TimelineTask) => {
+    // Task date matches a session date — find it.
+    const session =
+      mockTimeline.find((s) => s.date === t.date && s.status === 'attended') ??
+      mockTimeline.find((s) => s.status === 'attended');
+    if (!session) return;
+    setHwOpen({ session, currentHwStatus: session.hw });
+  };
 
   return (
     <Screen padded={false}>
@@ -75,10 +90,7 @@ export function JourneyScreen() {
           {active === 'timeline' && (
             <TimelineTab
               onTapSession={(sess) => setSessionOpen(sess)}
-              onTapHwTask={(t: TimelineTask) => {
-                /* wired in the HW submission popup task */
-                console.log('HW task', t.id);
-              }}
+              onTapHwTask={openHwForTask}
             />
           )}
           {active === 'peers' && <PeersTab onTapPeer={(p) => setPeerOpen(p)} />}
@@ -88,6 +100,7 @@ export function JourneyScreen() {
 
       <SessionPopup session={sessionOpen} onClose={() => setSessionOpen(null)} />
       <PeerPopup peer={peerOpen} onClose={() => setPeerOpen(null)} />
+      <HwSubmissionPopup context={hwOpen} onClose={() => setHwOpen(null)} />
     </Screen>
   );
 }

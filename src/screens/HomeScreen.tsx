@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '../components/Screen';
@@ -8,12 +8,23 @@ import { Button } from '../components/Button';
 import { Chip } from '../components/Chip';
 import { ProgressBar } from '../components/ProgressBar';
 import { colors, radius, spacing } from '../theme';
-import { mockStudent } from '../data/mockStudent';
+import { mockStudent, mockTimeline } from '../data/mockStudent';
+import {
+  HwSubmissionPopup,
+  HwSubmissionContext,
+} from './journey/HwSubmissionPopup';
 
 export function HomeScreen() {
   const s = mockStudent;
   const classPct = s.classesAttended / s.classesTotal;
   const greeting = greet();
+  const [hwOpen, setHwOpen] = useState<HwSubmissionContext | null>(null);
+
+  const openHw = () => {
+    const pending = mockTimeline.find((t) => t.hw === 'pending');
+    if (!pending) return;
+    setHwOpen({ session: pending, currentHwStatus: 'pending' });
+  };
 
   return (
     <Screen padded={false}>
@@ -81,7 +92,7 @@ export function HomeScreen() {
               Submit a photo of your drawing. Takes about {s.hwPending.estimateMin} minutes.
             </Text>
             <View style={styles.prioActions}>
-              <Button label="Submit homework" onPress={() => {}} />
+              <Button label="Submit homework" onPress={openHw} />
             </View>
           </Card>
         )}
@@ -141,6 +152,8 @@ export function HomeScreen() {
 
         <View style={{ height: spacing['3xl'] }} />
       </ScrollView>
+
+      <HwSubmissionPopup context={hwOpen} onClose={() => setHwOpen(null)} />
     </Screen>
   );
 }
