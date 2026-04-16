@@ -99,6 +99,9 @@ export function HwSubmissionPopup({ context, onClose, onSubmitted }: Props) {
       pushToCommunity: shareToCommunity,
     });
     setStep('done');
+    // Auto-close after brief confirmation — product doc:
+    // "Submitted! micro popup fires → screen auto-navigates to Timeline showing completed dot"
+    setTimeout(() => onClose(), 1400);
   };
 
   const title = context ? `Homework · ${context.session.title}` : 'Homework';
@@ -271,7 +274,7 @@ function ShareToggle({
       <View style={{ flex: 1, marginRight: spacing.md }}>
         <Text variant="bodyBold">Share with the community</Text>
         <Text variant="small" tone="muted" style={{ marginTop: 2 }}>
-          First name only. Teacher approves before it goes live.
+          First name only. Goes to the community after teacher's review.
         </Text>
       </View>
       <Switch

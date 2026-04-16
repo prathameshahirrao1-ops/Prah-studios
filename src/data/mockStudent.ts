@@ -39,6 +39,7 @@ export interface TimelineTask {
   title: string;
   meta?: string;
   done?: boolean;            // HW submitted / quiz attempted
+  sessionId?: string;        // for HW tasks — the session this HW belongs to
 }
 
 export interface Peer {
@@ -108,7 +109,7 @@ export const mockTimeline: TimelineSession[] = [
     title: 'Lines & Strokes',
     status: 'attended',
     keyConcepts: ['Line types', 'Grip & pressure', 'Straight vs curved'],
-    hw: 'reviewed',
+    hw: 'pending',
     yourWorkId: 'aw1',
     skills: [
       { name: 'Observation', stars: 3 },
@@ -184,11 +185,12 @@ export const mockTimeline: TimelineSession[] = [
 ];
 
 export const mockTasks: TimelineTask[] = [
+  { id: 't_hw1', date: '2026-03-29', kind: 'hw', title: 'Lines & Strokes HW', meta: 'Due 30 Mar · 20 min', sessionId: 's1' },
   { id: 't1', date: '2026-03-29', kind: 'gk', title: "Today's GK", meta: 'swipe through', done: true },
   { id: 't2', date: '2026-04-05', kind: 'quiz', title: 'Session 2 Quiz', meta: '3 questions', done: true },
   { id: 't3', date: '2026-04-05', kind: 'gk', title: "Today's GK", meta: 'swipe through', done: true },
   { id: 't4', date: '2026-04-12', kind: 'quiz', title: 'Session 3 Quiz', meta: '3 questions', done: false },
-  { id: 't5', date: '2026-04-15', kind: 'hw', title: 'Sketching Shapes HW', meta: 'Due 17 Apr · 20 min' },
+  { id: 't5', date: '2026-04-15', kind: 'hw', title: 'Sketching Shapes HW', meta: 'Due 17 Apr · 20 min', sessionId: 's4' },
   { id: 't6', date: '2026-04-15', kind: 'gk', title: "Today's GK", meta: '3 new items' },
 ];
 

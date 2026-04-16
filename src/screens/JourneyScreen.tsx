@@ -9,6 +9,8 @@ import { ImagePlaceholder } from '../components/ImagePlaceholder';
 import { colors, radius, spacing } from '../theme';
 import {
   mockStudent,
+  mockTasks,
+  mockTimeline,
   Peer,
   TimelineSession,
   TimelineTask,
@@ -22,7 +24,6 @@ import {
   HwSubmissionPopup,
   HwSubmissionContext,
 } from './journey/HwSubmissionPopup';
-import { mockTimeline } from '../data/mockStudent';
 
 type SubKey = 'timeline' | 'peers' | 'mywork';
 
@@ -38,15 +39,36 @@ export function JourneyScreen() {
   const [sessionOpen, setSessionOpen] = useState<TimelineSession | null>(null);
   const [peerOpen, setPeerOpen] = useState<Peer | null>(null);
   const [hwOpen, setHwOpen] = useState<HwSubmissionContext | null>(null);
+  // HW tasks (and their owning sessions) submitted during this browsing session.
+  const [submittedSessionIds, setSubmittedSessionIds] = useState<Set<string>>(new Set());
 
   const openHwForTask = (t: TimelineTask) => {
-    // Task date matches a session date — find it.
+    // Prefer the task's explicit sessionId; otherwise match by same-date attended session.
     const session =
-      mockTimeline.find((s) => s.date === t.date && s.status === 'attended') ??
-      mockTimeline.find((s) => s.status === 'attended');
+      (t.sessionId && mockTimeline.find((s) => s.id === t.sessionId)) ||
+      mockTimeline.find((s) => s.date === t.date && s.status === 'attended');
     if (!session) return;
-    setHwOpen({ session, currentHwStatus: session.hw });
+    const alreadySubmitted = submittedSessionIds.has(session.id);
+    setHwOpen({
+      session,
+      currentHwStatus: alreadySubmitted ? 'under_review' : session.hw,
+    });
   };
+
+  const onHwSubmitted = ({ sessionId }: { sessionId: string }) => {
+    setSubmittedSessionIds((prev) => {
+      const next = new Set(prev);
+      next.add(sessionId);
+      return next;
+    });
+  };
+
+  // Task IDs whose owning session was just submitted — show them as Completed in timeline.
+  const completedTaskIds = new Set(
+    mockTasks
+      .filter((t) => t.kind === 'hw' && t.sessionId && submittedSessionIds.has(t.sessionId))
+      .map((t) => t.id),
+  );
 
   return (
     <Screen padded={false}>
@@ -91,6 +113,7 @@ export function JourneyScreen() {
             <TimelineTab
               onTapSession={(sess) => setSessionOpen(sess)}
               onTapHwTask={openHwForTask}
+              extraCompletedTaskIds={completedTaskIds}
             />
           )}
           {active === 'peers' && <PeersTab onTapPeer={(p) => setPeerOpen(p)} />}
@@ -100,7 +123,11 @@ export function JourneyScreen() {
 
       <SessionPopup session={sessionOpen} onClose={() => setSessionOpen(null)} />
       <PeerPopup peer={peerOpen} onClose={() => setPeerOpen(null)} />
-      <HwSubmissionPopup context={hwOpen} onClose={() => setHwOpen(null)} />
+      <HwSubmissionPopup
+        context={hwOpen}
+        onClose={() => setHwOpen(null)}
+        onSubmitted={onHwSubmitted}
+      />
     </Screen>
   );
 }

@@ -15,6 +15,8 @@ import {
 interface Props {
   onTapSession: (session: TimelineSession) => void;
   onTapHwTask: (task: TimelineTask) => void;
+  /** Task IDs marked done during this session (e.g. HW just submitted in the popup). */
+  extraCompletedTaskIds?: Set<string>;
 }
 
 /** Merge + sort sessions and tasks by date into a single timeline stream. */
@@ -54,7 +56,7 @@ function buildGroups(): Group[] {
   return groups;
 }
 
-export function TimelineTab({ onTapSession, onTapHwTask }: Props) {
+export function TimelineTab({ onTapSession, onTapHwTask, extraCompletedTaskIds }: Props) {
   const groups = buildGroups();
   return (
     <View style={styles.container}>
@@ -66,6 +68,7 @@ export function TimelineTab({ onTapSession, onTapHwTask }: Props) {
           isLast={i === groups.length - 1}
           onTapSession={onTapSession}
           onTapHwTask={onTapHwTask}
+          extraCompletedTaskIds={extraCompletedTaskIds}
         />
       ))}
     </View>
@@ -78,12 +81,14 @@ function TimelineRow({
   isLast,
   onTapSession,
   onTapHwTask,
+  extraCompletedTaskIds,
 }: {
   group: Group;
   isFirst: boolean;
   isLast: boolean;
   onTapSession: (s: TimelineSession) => void;
   onTapHwTask: (t: TimelineTask) => void;
+  extraCompletedTaskIds?: Set<string>;
 }) {
   const dateLabel = formatShortDate(group.date);
   const nodeVariant =
@@ -118,9 +123,16 @@ function TimelineRow({
           <SessionCard session={group.session} onPress={() => onTapSession(group.session)} />
         ) : (
           <View style={styles.taskStack}>
-            {group.tasks.map((t) => (
-              <TaskCard key={t.id} task={t} onPressHw={() => onTapHwTask(t)} />
-            ))}
+            {group.tasks.map((t) => {
+              const doneOverride = extraCompletedTaskIds?.has(t.id) ? true : t.done;
+              return (
+                <TaskCard
+                  key={t.id}
+                  task={{ ...t, done: doneOverride }}
+                  onPressHw={() => onTapHwTask(t)}
+                />
+              );
+            })}
           </View>
         )}
       </View>
@@ -221,12 +233,7 @@ function TaskCard({
       : 'camera-outline';
 
   const onPress = task.kind === 'hw' ? onPressHw : () => {};
-  const rightMeta =
-    task.kind === 'hw'
-      ? task.meta
-      : task.done
-      ? 'Completed'
-      : task.meta;
+  const rightMeta = task.done ? 'Completed' : task.meta;
 
   return (
     <Pressable
