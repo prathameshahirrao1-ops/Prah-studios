@@ -1,0 +1,14 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "expo-web",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "cd /Users/prathamesh.ahirrao/Downloads/Prah-Studio/repos/Prah-studios && CI=1 EXPO_NO_TELEMETRY=1 npx expo start --web --port 8082"
+      ],
+      "port": 8082
+    }
+  ]
+}
