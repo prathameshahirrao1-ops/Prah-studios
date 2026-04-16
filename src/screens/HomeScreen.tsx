@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '../components/Screen';
@@ -13,17 +13,41 @@ import {
   HwSubmissionPopup,
   HwSubmissionContext,
 } from './journey/HwSubmissionPopup';
+import { LiveClassCard } from './home/LiveClassCard';
+import { PostClassCard } from './home/PostClassCard';
+import { DevStateSwitcher } from './home/DevStateSwitcher';
+import {
+  DEV_PRESETS,
+  evaluateHomeState,
+  HomeStateKey,
+} from '../data/homeState';
 
 export function HomeScreen() {
   const s = mockStudent;
   const classPct = s.classesAttended / s.classesTotal;
   const greeting = greet();
   const [hwOpen, setHwOpen] = useState<HwSubmissionContext | null>(null);
+  const [forcedState, setForcedState] = useState<HomeStateKey | 'auto'>('auto');
 
-  const openHw = () => {
+  const homeCtx = useMemo(() => {
+    if (forcedState === 'auto') return evaluateHomeState();
+    // For forced states, pick the context matching the preset moment.
+    const ctx = evaluateHomeState(DEV_PRESETS[forcedState]);
+    // If the forced key differs (e.g. enrolled_idle still says hw_pending because
+    // mock has HW), override the state explicitly so the demo works.
+    return { ...ctx, state: forcedState };
+  }, [forcedState]);
+
+  const openHwPending = () => {
     const pending = mockTimeline.find((t) => t.hw === 'pending');
     if (!pending) return;
     setHwOpen({ session: pending, currentHwStatus: 'pending' });
+  };
+
+  const openHwForSession = (sessionId: string) => {
+    const session = mockTimeline.find((t) => t.id === sessionId);
+    if (!session) return;
+    setHwOpen({ session, currentHwStatus: session.hw ?? 'pending' });
   };
 
   return (
@@ -32,6 +56,9 @@ export function HomeScreen() {
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
+        {/* Dev switcher */}
+        <DevStateSwitcher active={forcedState} onPick={setForcedState} />
+
         {/* Header */}
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
@@ -47,7 +74,7 @@ export function HomeScreen() {
           </View>
         </View>
 
-        {/* Progress strip */}
+        {/* Progress strip — always present */}
         <Card style={styles.progressCard} onPress={() => {}}>
           <View style={styles.progressTop}>
             <View>
@@ -76,8 +103,24 @@ export function HomeScreen() {
           </View>
         </Card>
 
-        {/* Priority 1: Homework pending */}
-        {s.hwPending && (
+        {/* ── State-driven priority card ─────────────────────────── */}
+        {homeCtx.state === 'class_ongoing' && homeCtx.liveSession && (
+          <LiveClassCard
+            session={homeCtx.liveSession}
+            startTimeLabel="10:00 am"
+          />
+        )}
+
+        {homeCtx.state === 'post_class' && homeCtx.justEndedSession && (
+          <PostClassCard
+            session={homeCtx.justEndedSession}
+            onSubmitHw={() =>
+              openHwForSession(homeCtx.justEndedSession!.id)
+            }
+          />
+        )}
+
+        {homeCtx.state === 'hw_pending' && s.hwPending && (
           <Card style={styles.prioCard}>
             <View style={styles.prioHeader}>
               <Chip label="Homework" tone="warning" />
@@ -92,63 +135,87 @@ export function HomeScreen() {
               Submit a photo of your drawing. Takes about {s.hwPending.estimateMin} minutes.
             </Text>
             <View style={styles.prioActions}>
-              <Button label="Submit homework" onPress={openHw} />
+              <Button label="Submit homework" onPress={openHwPending} />
             </View>
           </Card>
         )}
 
-        {/* Priority 2: Next class */}
-        {s.nextClassAt && (
-          <Card onPress={() => {}}>
+        {homeCtx.state === 'enrolled_idle' && homeCtx.nextSession && (
+          <Card style={styles.prioCard}>
             <View style={styles.prioHeader}>
-              <Chip label="Next class" />
+              <Chip label="Up next" />
               <Text variant="small" tone="muted">
-                {relativeDay(s.nextClassAt)}
+                {relativeDay(homeCtx.nextSession.date)}
               </Text>
             </View>
-            <Text variant="h3" style={{ marginTop: spacing.sm }}>
-              Session 5 · Observation Basics
+            <Text variant="h2" style={{ marginTop: spacing.sm }}>
+              Session {homeCtx.nextSession.sessionNumber} · {homeCtx.nextSession.title}
             </Text>
-            <Text variant="small" tone="muted" style={{ marginTop: 4 }}>
-              {formatDateTime(s.nextClassAt)}
+            <Text variant="body" tone="secondary" style={{ marginTop: 4 }}>
+              We'll send a reminder a day before. Until then — warm up with
+              today's art GK or a quick draw.
             </Text>
           </Card>
         )}
 
-        {/* Engagement zone — placeholder cards */}
-        <Text variant="label" tone="muted" style={styles.sectionLabel}>
-          Today for you
-        </Text>
-
-        <Card compact onPress={() => {}}>
-          <View style={styles.engRow}>
-            <View style={styles.engIcon}>
-              <Ionicons name="bulb-outline" size={20} color={colors.textPrimary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text variant="bodyBold">Art GK · today</Text>
-              <Text variant="small" tone="muted">
-                3 new things to learn · swipe through
+        {/* ── Always-on: next class summary (when not already the priority) ─── */}
+        {homeCtx.state !== 'enrolled_idle' &&
+          homeCtx.state !== 'class_ongoing' &&
+          homeCtx.nextSession && (
+            <Card onPress={() => {}}>
+              <View style={styles.prioHeader}>
+                <Chip label="Next class" />
+                <Text variant="small" tone="muted">
+                  {relativeDay(homeCtx.nextSession.date)}
+                </Text>
+              </View>
+              <Text variant="h3" style={{ marginTop: spacing.sm }}>
+                Session {homeCtx.nextSession.sessionNumber} · {homeCtx.nextSession.title}
               </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-          </View>
-        </Card>
-
-        <Card compact onPress={() => {}}>
-          <View style={styles.engRow}>
-            <View style={styles.engIcon}>
-              <Ionicons name="create-outline" size={20} color={colors.textPrimary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text variant="bodyBold">Quick draw</Text>
-              <Text variant="small" tone="muted">
-                Draw something that makes you feel fast
+              <Text variant="small" tone="muted" style={{ marginTop: 4 }}>
+                {formatDateHeuristic(homeCtx.nextSession.date)}
               </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-          </View>
-        </Card>
+            </Card>
+          )}
+
+        {/* Engagement zone — hidden during class, otherwise always present */}
+        {homeCtx.state !== 'class_ongoing' && (
+          <>
+            <Text variant="label" tone="muted" style={styles.sectionLabel}>
+              Today for you
+            </Text>
+
+            <Card compact onPress={() => {}}>
+              <View style={styles.engRow}>
+                <View style={styles.engIcon}>
+                  <Ionicons name="bulb-outline" size={20} color={colors.textPrimary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text variant="bodyBold">Art GK · today</Text>
+                  <Text variant="small" tone="muted">
+                    3 new things to learn · swipe through
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+              </View>
+            </Card>
+
+            <Card compact onPress={() => {}}>
+              <View style={styles.engRow}>
+                <View style={styles.engIcon}>
+                  <Ionicons name="create-outline" size={20} color={colors.textPrimary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text variant="bodyBold">Quick draw</Text>
+                  <Text variant="small" tone="muted">
+                    Draw something that makes you feel fast
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+              </View>
+            </Card>
+          </>
+        )}
 
         <View style={{ height: spacing['3xl'] }} />
       </ScrollView>
@@ -185,21 +252,24 @@ function formatDate(iso: string): string {
   return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
 }
 
-function formatDateTime(iso: string): string {
+function formatDateHeuristic(iso: string): string {
   const d = new Date(iso);
-  return d.toLocaleString('en-IN', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
+  // Session dates don't carry a time — show the date + class time (10:00 am).
+  return (
+    d.toLocaleDateString('en-IN', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+    }) + ' · 10:00 am'
+  );
 }
 
 function relativeDay(iso: string): string {
   const d = new Date(iso);
   const now = new Date();
-  const diffDays = Math.floor((d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  const diffDays = Math.floor(
+    (d.setHours(0, 0, 0, 0) - now.setHours(0, 0, 0, 0)) / (1000 * 60 * 60 * 24),
+  );
   if (diffDays <= 0) return 'Today';
   if (diffDays === 1) return 'Tomorrow';
   if (diffDays < 7) return `In ${diffDays} days`;
