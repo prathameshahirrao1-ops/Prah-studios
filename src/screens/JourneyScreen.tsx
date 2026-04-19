@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Modal, ScrollView, StyleSheet, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '../components/Screen';
 import { Text } from '../components/Text';
@@ -24,6 +24,11 @@ import {
   HwSubmissionPopup,
   HwSubmissionContext,
 } from './journey/HwSubmissionPopup';
+import { QuizScreen } from './journey/QuizScreen';
+import { GkCarouselScreen } from './journey/GkCarouselScreen';
+import { FullImagePopover } from './profile/FullImageView';
+import { findQuizForTask, Quiz } from '../data/mockQuizzes';
+import { mockGkToday } from '../data/mockGkCarousel';
 import { ChatScreen } from './ChatScreen';
 
 type SubKey = 'timeline' | 'peers' | 'mywork';
@@ -45,6 +50,15 @@ export function JourneyScreen() {
   // The task ID to celebrate (just submitted) — cleared after the animation finishes.
   const [celebrateTaskId, setCelebrateTaskId] = useState<string | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
+  // Quiz state — active quiz + task id + set of completed task ids so the
+  // timeline checkmark sticks after the user finishes the quiz.
+  const [activeQuiz, setActiveQuiz] = useState<{ quiz: Quiz; taskId: string } | null>(null);
+  const [completedQuizTaskIds, setCompletedQuizTaskIds] = useState<Set<string>>(new Set());
+  // GK carousel state — active task id + set of completed GK task ids.
+  const [activeGkTaskId, setActiveGkTaskId] = useState<string | null>(null);
+  const [completedGkTaskIds, setCompletedGkTaskIds] = useState<Set<string>>(new Set());
+  // Artwork popover state — shared across MyWorkTab, SessionPopup, PeerPopup.
+  const [openArtworkId, setOpenArtworkId] = useState<string | null>(null);
 
   const openHwForTask = (t: TimelineTask) => {
     // Prefer the task's explicit sessionId; otherwise match by same-date attended session.
@@ -78,11 +92,24 @@ export function JourneyScreen() {
   };
 
   // Task IDs whose owning session was just submitted — show them as Completed in timeline.
-  const completedTaskIds = new Set(
-    mockTasks
+  // Also include quizzes completed this session.
+  const completedTaskIds = new Set<string>([
+    ...mockTasks
       .filter((t) => t.kind === 'hw' && t.sessionId && submittedSessionIds.has(t.sessionId))
       .map((t) => t.id),
-  );
+    ...Array.from(completedQuizTaskIds),
+    ...Array.from(completedGkTaskIds),
+  ]);
+
+  const openQuizForTask = (t: TimelineTask) => {
+    const quiz = findQuizForTask(t.sessionId);
+    if (!quiz) return;
+    setActiveQuiz({ quiz, taskId: t.id });
+  };
+
+  const openGkForTask = (t: TimelineTask) => {
+    setActiveGkTaskId(t.id);
+  };
 
   return (
     <Screen padded={false}>
@@ -105,6 +132,23 @@ export function JourneyScreen() {
                 {s.joinedDate}
               </Text>
             </View>
+            <Pressable
+              onPress={() => setChatOpen(true)}
+              style={({ pressed }) => [
+                styles.chatBtn,
+                pressed && { opacity: 0.7 },
+              ]}
+              accessibilityLabel="Chat"
+              accessibilityRole="button"
+              hitSlop={8}
+            >
+              <Ionicons
+                name="chatbubble-ellipses-outline"
+                size={22}
+                color={colors.textPrimary}
+              />
+              <View style={styles.chatDot} />
+            </Pressable>
           </View>
 
           <View style={styles.stats}>
@@ -127,18 +171,30 @@ export function JourneyScreen() {
             <TimelineTab
               onTapSession={(sess) => setSessionOpen(sess)}
               onTapHwTask={openHwForTask}
+              onTapQuizTask={openQuizForTask}
+              onTapGkTask={openGkForTask}
               extraCompletedTaskIds={completedTaskIds}
               justSubmittedHwTaskId={celebrateTaskId}
               onTapNotThere={() => setChatOpen(true)}
             />
           )}
           {active === 'peers' && <PeersTab onTapPeer={(p) => setPeerOpen(p)} />}
-          {active === 'mywork' && <MyWorkTab />}
+          {active === 'mywork' && (
+            <MyWorkTab onTapArtwork={(id) => setOpenArtworkId(id)} />
+          )}
         </View>
       </ScrollView>
 
-      <SessionPopup session={sessionOpen} onClose={() => setSessionOpen(null)} />
-      <PeerPopup peer={peerOpen} onClose={() => setPeerOpen(null)} />
+      <SessionPopup
+        session={sessionOpen}
+        onClose={() => setSessionOpen(null)}
+        onTapArtwork={(id) => setOpenArtworkId(id)}
+      />
+      <PeerPopup
+        peer={peerOpen}
+        onClose={() => setPeerOpen(null)}
+        onTapArtwork={(id) => setOpenArtworkId(id)}
+      />
       <HwSubmissionPopup
         context={hwOpen}
         onClose={() => setHwOpen(null)}
@@ -152,6 +208,53 @@ export function JourneyScreen() {
         onRequestClose={() => setChatOpen(false)}
       >
         <ChatScreen onClose={() => setChatOpen(false)} />
+      </Modal>
+
+      <Modal
+        visible={!!activeQuiz}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={() => setActiveQuiz(null)}
+      >
+        {activeQuiz && (
+          <QuizScreen
+            quiz={activeQuiz.quiz}
+            onClose={() => setActiveQuiz(null)}
+            onComplete={() => {
+              setCompletedQuizTaskIds((prev) => {
+                const next = new Set(prev);
+                next.add(activeQuiz.taskId);
+                return next;
+              });
+            }}
+          />
+        )}
+      </Modal>
+
+      <FullImagePopover
+        artworkId={openArtworkId}
+        onClose={() => setOpenArtworkId(null)}
+      />
+
+      <Modal
+        visible={!!activeGkTaskId}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={() => setActiveGkTaskId(null)}
+      >
+        {activeGkTaskId && (
+          <GkCarouselScreen
+            carousel={mockGkToday}
+            onClose={() => setActiveGkTaskId(null)}
+            onComplete={() => {
+              setCompletedGkTaskIds((prev) => {
+                const next = new Set(prev);
+                next.add(activeGkTaskId);
+                return next;
+              });
+            }}
+          />
+        )}
       </Modal>
     </Screen>
   );
@@ -185,6 +288,28 @@ const styles = StyleSheet.create({
   courseRow: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  chatBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: spacing.sm,
+  },
+  chatDot: {
+    position: 'absolute',
+    top: 9,
+    right: 10,
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+    backgroundColor: colors.error,
+    borderWidth: 1.5,
+    borderColor: colors.surface,
   },
   stats: {
     flexDirection: 'row',
