@@ -45,16 +45,23 @@ function PeerCard({ peer, onPress }: { peer: Peer; onPress: () => void }) {
       </View>
 
       {peer.artworks.length > 0 ? (
-        <View style={styles.thumbRow}>
-          {peer.artworks.slice(0, 3).map((a) => (
-            <View key={a.id} style={styles.thumbWrap}>
-              <ImagePlaceholder aspectRatio={1} rounded="md" />
-              <Text variant="caption" tone="muted" style={{ marginTop: 4 }}>
-                Session {a.sessionNumber}
-              </Text>
-            </View>
-          ))}
-        </View>
+        <>
+          <View style={styles.thumbRow}>
+            {peer.artworks.slice(0, 2).map((a) => (
+              <View key={a.id} style={styles.thumbWrap}>
+                <ImagePlaceholder aspectRatio={1} rounded="md" />
+                <Text variant="caption" tone="muted" style={{ marginTop: 4 }}>
+                  Session {a.sessionNumber}
+                </Text>
+              </View>
+            ))}
+          </View>
+          {peer.artworks.length > 2 && (
+            <Text variant="small" tone="muted" style={styles.moreLabel}>
+              +{peer.artworks.length - 2} more · tap to view all
+            </Text>
+          )}
+        </>
       ) : (
         <Text variant="small" tone="muted" style={{ marginTop: spacing.md }}>
           No artworks yet
@@ -93,5 +100,8 @@ const styles = StyleSheet.create({
   },
   thumbWrap: {
     flex: 1,
+  },
+  moreLabel: {
+    marginTop: spacing.sm,
   },
 });

@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { Popup } from '../../components/Popup';
 import { Text } from '../../components/Text';
 import { ImagePlaceholder } from '../../components/ImagePlaceholder';
@@ -10,9 +10,10 @@ import { colors, radius, spacing } from '../../theme';
 interface Props {
   session: TimelineSession | null;
   onClose: () => void;
+  onTapArtwork?: (artworkId: string) => void;
 }
 
-export function SessionPopup({ session, onClose }: Props) {
+export function SessionPopup({ session, onClose, onTapArtwork }: Props) {
   if (!session) {
     return <Popup visible={false} title="" onClose={onClose} children={<View />} />;
   }
@@ -50,9 +51,16 @@ export function SessionPopup({ session, onClose }: Props) {
         <Text variant="label" tone="muted">
           Your work
         </Text>
-        <View style={{ marginTop: spacing.sm }}>
+        <Pressable
+          onPress={() => session.yourWorkId && onTapArtwork?.(session.yourWorkId)}
+          disabled={!session.yourWorkId || !onTapArtwork}
+          style={({ pressed }) => [
+            { marginTop: spacing.sm },
+            pressed && session.yourWorkId && onTapArtwork && { opacity: 0.85 },
+          ]}
+        >
           <ImagePlaceholder aspectRatio={16 / 10} rounded="lg" iconSize={28} />
-        </View>
+        </Pressable>
       </View>
 
       {/* Skills practiced */}
@@ -78,7 +86,15 @@ export function SessionPopup({ session, onClose }: Props) {
         {peerWorks.length > 0 ? (
           <View style={styles.peerGrid}>
             {peerWorks.map(({ peer, artwork }) => (
-              <View key={artwork.id} style={styles.peerTile}>
+              <Pressable
+                key={artwork.id}
+                onPress={() => onTapArtwork?.(artwork.id)}
+                disabled={!onTapArtwork}
+                style={({ pressed }) => [
+                  styles.peerTile,
+                  pressed && onTapArtwork && { opacity: 0.85 },
+                ]}
+              >
                 <ImagePlaceholder aspectRatio={1} rounded="md" />
                 <View style={styles.peerFoot}>
                   <View style={styles.peerAvatar}>
@@ -90,7 +106,7 @@ export function SessionPopup({ session, onClose }: Props) {
                     {peer.firstName}
                   </Text>
                 </View>
-              </View>
+              </Pressable>
             ))}
           </View>
         ) : (

@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { Popup } from '../../components/Popup';
 import { Text } from '../../components/Text';
 import { ImagePlaceholder } from '../../components/ImagePlaceholder';
@@ -9,19 +9,13 @@ import { colors, radius, spacing } from '../../theme';
 interface Props {
   peer: Peer | null;
   onClose: () => void;
+  onTapArtwork?: (artworkId: string) => void;
 }
 
-export function PeerPopup({ peer, onClose }: Props) {
+export function PeerPopup({ peer, onClose, onTapArtwork }: Props) {
   if (!peer) {
     return <Popup visible={false} title="" onClose={onClose} children={<View />} />;
   }
-
-  // Group artworks by session number
-  const grouped = peer.artworks.reduce<Record<number, typeof peer.artworks>>((acc, a) => {
-    (acc[a.sessionNumber] ??= []).push(a);
-    return acc;
-  }, {});
-  const sessionNumbers = Object.keys(grouped).map(Number).sort((a, b) => a - b);
 
   return (
     <Popup visible onClose={onClose} title={`${peer.firstName} ${peer.lastName[0]}.`} fullHeight>
@@ -49,20 +43,24 @@ export function PeerPopup({ peer, onClose }: Props) {
           {peer.firstName} hasn't shared any work yet.
         </Text>
       ) : (
-        sessionNumbers.map((n) => (
-          <View key={n}>
-            <Text variant="label" tone="muted">
-              Session {n}
-            </Text>
-            <View style={styles.worksRow}>
-              {grouped[n].map((a) => (
-                <View key={a.id} style={styles.workTile}>
-                  <ImagePlaceholder aspectRatio={1} rounded="lg" iconSize={24} />
-                </View>
-              ))}
-            </View>
-          </View>
-        ))
+        <View style={styles.worksRow}>
+          {peer.artworks.map((a) => (
+            <Pressable
+              key={a.id}
+              onPress={() => onTapArtwork?.(a.id)}
+              disabled={!onTapArtwork}
+              style={({ pressed }) => [
+                styles.workTile,
+                pressed && onTapArtwork && { opacity: 0.85 },
+              ]}
+            >
+              <ImagePlaceholder aspectRatio={1} rounded="lg" iconSize={24} />
+              <Text variant="caption" tone="muted" style={{ marginTop: 4 }}>
+                Session {a.sessionNumber}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
       )}
     </Popup>
   );
