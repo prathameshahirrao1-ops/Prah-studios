@@ -101,6 +101,22 @@ export const mockArtworks: Artwork[] = [
   { id: 'aw4', sessionNumber: 4, sessionTitle: 'Sketching Shapes', date: '2026-04-14' },
 ];
 
+/**
+ * Look up an artwork by id across the student's own works AND peer works.
+ * Used by the shared FullImagePopover so any tap on any artwork tile —
+ * Profile, All My Works, Journey My Work, Session popup, Peer popup —
+ * can open the same viewer.
+ */
+export function findArtworkById(id: string): Artwork | undefined {
+  const own = mockArtworks.find((a) => a.id === id);
+  if (own) return own;
+  for (const p of mockPeers) {
+    const f = p.artworks.find((a) => a.id === id);
+    if (f) return f;
+  }
+  return undefined;
+}
+
 export const mockTimeline: TimelineSession[] = [
   {
     id: 's1',
