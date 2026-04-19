@@ -6,7 +6,7 @@
       "runtimeExecutable": "sh",
       "runtimeArgs": [
         "-c",
-        "cd /Users/prathamesh.ahirrao/Downloads/Prah-Studio/repos/Prah-studios && CI=1 EXPO_NO_TELEMETRY=1 npx expo start --web --port 8082"
+        "cd /Users/prathamesh.ahirrao/Downloads/Prah-Studio/repos/Prah-studios/.claude/worktrees/agitated-curran-f97999 && CI=1 EXPO_NO_TELEMETRY=1 npx expo start --web --port 8082"
       ],
       "port": 8082
     }

@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Modal, ScrollView, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '../components/Screen';
 import { Text } from '../components/Text';
@@ -16,6 +16,8 @@ import {
 import { LiveClassCard } from './home/LiveClassCard';
 import { PostClassCard } from './home/PostClassCard';
 import { DevStateSwitcher } from './home/DevStateSwitcher';
+import { GkCarouselScreen } from './journey/GkCarouselScreen';
+import { mockGkToday } from '../data/mockGkCarousel';
 import {
   DEV_PRESETS,
   evaluateHomeState,
@@ -28,6 +30,7 @@ export function HomeScreen() {
   const greeting = greet();
   const [hwOpen, setHwOpen] = useState<HwSubmissionContext | null>(null);
   const [forcedState, setForcedState] = useState<HomeStateKey | 'auto'>('auto');
+  const [gkOpen, setGkOpen] = useState(false);
 
   const homeCtx = useMemo(() => {
     if (forcedState === 'auto') return evaluateHomeState();
@@ -185,7 +188,7 @@ export function HomeScreen() {
               Today for you
             </Text>
 
-            <Card compact onPress={() => {}}>
+            <Card compact onPress={() => setGkOpen(true)}>
               <View style={styles.engRow}>
                 <View style={styles.engIcon}>
                   <Ionicons name="bulb-outline" size={20} color={colors.textPrimary} />
@@ -221,6 +224,19 @@ export function HomeScreen() {
       </ScrollView>
 
       <HwSubmissionPopup context={hwOpen} onClose={() => setHwOpen(null)} />
+
+      <Modal
+        visible={gkOpen}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={() => setGkOpen(false)}
+      >
+        <GkCarouselScreen
+          carousel={mockGkToday}
+          onClose={() => setGkOpen(false)}
+          onComplete={() => {}}
+        />
+      </Modal>
     </Screen>
   );
 }
