@@ -5,6 +5,9 @@ import { colors, typography } from '../theme';
 type Variant =
   | 'displayLg'
   | 'displayMd'
+  | 'display'
+  | 'number'
+  | 'numberLg'
   | 'h1'
   | 'h2'
   | 'h3'

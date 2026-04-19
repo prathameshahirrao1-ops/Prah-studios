@@ -1,11 +1,43 @@
 /**
- * Pass 1 — system fonts only.
- * Pass 2 will swap fontFamily to DM Serif Display / DM Sans via expo-font.
+ * Pass 1 — mixed system: Georgia (serif) for display + numbers, default sans
+ * for UI. Pass 2 will load a proper display serif + UI sans via expo-font.
  */
 export const typography = {
   // Display — reserved for emotional moments (celebration, welcome).
-  displayLg: { fontSize: 32, lineHeight: 38, fontWeight: '700' as const },
-  displayMd: { fontSize: 24, lineHeight: 30, fontWeight: '700' as const },
+  displayLg: {
+    fontSize: 32,
+    lineHeight: 38,
+    fontWeight: '700' as const,
+    fontFamily: 'Georgia',
+  },
+  displayMd: {
+    fontSize: 24,
+    lineHeight: 30,
+    fontWeight: '700' as const,
+    fontFamily: 'Georgia',
+  },
+
+  // Display serif — student name, editorial moments.
+  display: {
+    fontSize: 28,
+    lineHeight: 34,
+    fontWeight: '600' as const,
+    fontFamily: 'Georgia',
+  },
+
+  // Serif numbers — skill points, streak counts, stat values.
+  number: {
+    fontSize: 20,
+    lineHeight: 24,
+    fontWeight: '500' as const,
+    fontFamily: 'Georgia',
+  },
+  numberLg: {
+    fontSize: 36,
+    lineHeight: 42,
+    fontWeight: '500' as const,
+    fontFamily: 'Georgia',
+  },
 
   // Headings
   h1: { fontSize: 22, lineHeight: 28, fontWeight: '700' as const },
