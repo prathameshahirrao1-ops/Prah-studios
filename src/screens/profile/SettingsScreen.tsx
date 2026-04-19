@@ -21,6 +21,7 @@ const ROWS: {
   { key: 'notifications', label: 'Notifications', icon: 'notifications-outline', route: 'SettingsNotifications' },
   { key: 'account',       label: 'Profile · Account details', icon: 'person-circle-outline', route: 'SettingsAccount' },
   { key: 'billing',       label: 'Billing history', icon: 'receipt-outline', route: 'SettingsBilling' },
+  { key: 'referral',      label: 'Referral', icon: 'gift-outline', route: 'Referral' },
   { key: 'logout',        label: 'Logout', icon: 'log-out-outline', danger: true },
 ];
 

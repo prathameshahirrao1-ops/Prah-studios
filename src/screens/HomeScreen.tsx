@@ -1,6 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { Modal, ScrollView, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import type { NavigationProp } from '@react-navigation/native';
+import type { RootTabParamList } from '../navigation/RootTabs';
 import { Screen } from '../components/Screen';
 import { Text } from '../components/Text';
 import { Card } from '../components/Card';
@@ -31,6 +34,7 @@ export function HomeScreen() {
   const [hwOpen, setHwOpen] = useState<HwSubmissionContext | null>(null);
   const [forcedState, setForcedState] = useState<HomeStateKey | 'auto'>('auto');
   const [gkOpen, setGkOpen] = useState(false);
+  const rootNav = useNavigation<NavigationProp<RootTabParamList>>();
 
   const homeCtx = useMemo(() => {
     if (forcedState === 'auto') return evaluateHomeState();
@@ -212,6 +216,26 @@ export function HomeScreen() {
                   <Text variant="bodyBold">Quick draw</Text>
                   <Text variant="small" tone="muted">
                     Draw something that makes you feel fast
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+              </View>
+            </Card>
+
+            <Card
+              compact
+              onPress={() =>
+                rootNav.navigate('Profile', { screen: 'Journeys' } as any)
+              }
+            >
+              <View style={styles.engRow}>
+                <View style={styles.engIcon}>
+                  <Ionicons name="trail-sign-outline" size={20} color={colors.textPrimary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text variant="bodyBold">Explore journeys</Text>
+                  <Text variant="small" tone="muted">
+                    Workshops & courses to discover
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />

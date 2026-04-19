@@ -7,14 +7,16 @@ import { Screen } from '../components/Screen';
 import { Text } from '../components/Text';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
+import { ProgressBar } from '../components/ProgressBar';
 import { ImagePlaceholder } from '../components/ImagePlaceholder';
 import { colors, radius, spacing } from '../theme';
 import { mockArtworks, mockStudent } from '../data/mockStudent';
 import { mockStreaks, STREAK_LABEL, StreakType } from '../data/mockStreaks';
+import { masterJourneys, currentJourney } from '../data/mockJourneys';
 import {
+  SKILL_COLORS,
   SKILL_META,
   SKILL_ORDER,
-  SkillType,
   levelFor,
   mockSkills,
 } from '../data/mockSkills';
@@ -27,11 +29,10 @@ export function ProfileScreen() {
   const s = mockStudent;
   const navigation = useNavigation<Nav>();
   const [openArtworkId, setOpenArtworkId] = useState<string | null>(null);
+  const [referralDismissed, setReferralDismissed] = useState(false);
 
-  // Overall level = average of all 5 skill points.
   const total = SKILL_ORDER.reduce((sum, k) => sum + mockSkills.points[k], 0);
-  const avg = total / SKILL_ORDER.length;
-  const overall = levelFor(avg);
+  const overall = levelFor(total);
 
   return (
     <Screen padded={false}>
@@ -39,9 +40,6 @@ export function ProfileScreen() {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerTopRow}>
-            <Text variant="caption" tone="muted">
-              {s.joinedDate}
-            </Text>
             <Pressable
               onPress={() => navigation.navigate('Settings')}
               style={({ pressed }) => [styles.gearBtn, pressed && { opacity: 0.7 }]}
@@ -52,22 +50,39 @@ export function ProfileScreen() {
             </Pressable>
           </View>
           <View style={styles.headerContent}>
-            <View style={styles.avatar}>
-              <Text variant="display" tone="inverse">
-                {s.firstName[0]}
+            <Pressable
+              onPress={() => navigation.navigate('LevelDetail')}
+              style={[styles.avatarRing, segmentedRingStyle(mockSkills.points)]}
+            >
+              <View style={styles.avatar}>
+                <Text variant="display" tone="inverse">
+                  {s.firstName[0]}
+                </Text>
+              </View>
+            </Pressable>
+            <View style={styles.headerText}>
+              <Text variant="display">{s.firstName}</Text>
+              <Text variant="body" tone="secondary" style={{ marginTop: 2 }}>
+                {overall.name} Artist · Level {overall.index + 1}
+              </Text>
+              <Text variant="caption" tone="muted" style={{ marginTop: 2 }}>
+                {s.joinedDate}
               </Text>
             </View>
-            <Text variant="display" style={{ marginTop: spacing.md }}>
-              {s.firstName}
-            </Text>
-            <Text variant="body" tone="secondary" style={{ marginTop: 4 }}>
-              {overall.name} Artist · Level {overall.index + 1}
-            </Text>
           </View>
         </View>
 
+        <CurrentJourneyBlock />
+
+        {!referralDismissed && (
+          <ReferralCard
+            onPress={() => navigation.navigate('Referral')}
+            onDismiss={() => setReferralDismissed(true)}
+          />
+        )}
+
         <SkillMap
-          onTapSkill={(skill) => navigation.navigate('SkillDetail', { skill })}
+          onTapSkill={() => navigation.navigate('LevelDetail')}
         />
 
         <StreaksBlock />
@@ -77,7 +92,7 @@ export function ProfileScreen() {
           onTapArtwork={(id) => setOpenArtworkId(id)}
         />
 
-        <ReferralCard onPress={() => navigation.navigate('Referral')} />
+        <JourneysBlock onViewAll={() => navigation.navigate('Journeys')} />
       </ScrollView>
 
       <FullImagePopover
@@ -88,84 +103,95 @@ export function ProfileScreen() {
   );
 }
 
-function SkillMap({ onTapSkill }: { onTapSkill: (s: SkillType) => void }) {
-  const topRow = SKILL_ORDER.slice(0, 3);
-  const bottomRow = SKILL_ORDER.slice(3, 5);
+function CurrentJourneyBlock() {
+  const s = mockStudent;
+  const classPct = s.classesAttended / s.classesTotal;
   return (
     <View style={styles.block}>
       <View style={styles.blockHeader}>
-        <Text variant="label" tone="muted">
-          Skills
-        </Text>
-        <Text variant="caption" tone="muted">
-          Tap for details
-        </Text>
+        <Text variant="label" tone="muted">Current journey</Text>
+        <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
       </View>
-      <View style={styles.olympicTop}>
-        {topRow.map((skill) => (
-          <SkillCircle
-            key={skill}
-            skill={skill}
-            points={mockSkills.points[skill]}
-            onPress={() => onTapSkill(skill)}
-          />
-        ))}
-      </View>
-      <View style={styles.olympicBottom}>
-        {bottomRow.map((skill) => (
-          <SkillCircle
-            key={skill}
-            skill={skill}
-            points={mockSkills.points[skill]}
-            onPress={() => onTapSkill(skill)}
-          />
-        ))}
+      <Text variant="h2" style={{ marginBottom: 2 }}>{s.course}</Text>
+      <Text variant="small" tone="muted" style={{ marginBottom: spacing.md }}>{s.joinedDate}</Text>
+      <ProgressBar value={classPct} />
+      <View style={styles.journeyStats}>
+        <View style={styles.journeyStat}>
+          <Text variant="bodyBold">{s.classesAttended}/{s.classesTotal}</Text>
+          <Text variant="caption" tone="muted">Classes</Text>
+        </View>
+        <View style={styles.journeyDivider} />
+        <View style={styles.journeyStat}>
+          <Text variant="bodyBold">{s.hwSubmitted}/{s.hwTotal}</Text>
+          <Text variant="caption" tone="muted">Homework</Text>
+        </View>
+        <View style={styles.journeyDivider} />
+        <View style={styles.journeyStat}>
+          <Text variant="bodyBold">{s.quizzesDone}</Text>
+          <Text variant="caption" tone="muted">Quizzes</Text>
+        </View>
       </View>
     </View>
   );
 }
 
-function SkillCircle({
-  skill,
-  points,
-  onPress,
-}: {
-  skill: SkillType;
-  points: number;
-  onPress: () => void;
-}) {
-  const meta = SKILL_META[skill];
-  const level = levelFor(points);
-  const inLevel = points - level.min;
-  const levelSpan = level.max - level.min;
-
+function SkillMap({ onTapSkill }: { onTapSkill: () => void }) {
+  const topRow = SKILL_ORDER.slice(0, 3);
+  const bottomRow = SKILL_ORDER.slice(3, 5);
   return (
     <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [styles.skillCell, pressed && { opacity: 0.85 }]}
+      onPress={onTapSkill}
+      style={({ pressed }) => [styles.block, pressed && { opacity: 0.9 }]}
     >
-      <View style={[styles.miniRing, webArcStyle(inLevel / levelSpan)]}>
-        <View style={styles.miniRingInner}>
-          <Text variant="number">{points}</Text>
-        </View>
+      <View style={styles.blockHeader}>
+        <Text variant="label" tone="muted">Skills</Text>
+        <Text variant="caption" tone="muted">Tap for details</Text>
       </View>
-      <Text
-        variant="caption"
-        style={{ fontWeight: '600', textAlign: 'center', marginTop: 6 }}
-        numberOfLines={2}
-      >
-        {meta.name}
-      </Text>
-      <Text
-        variant="caption"
-        tone="muted"
-        style={{ textAlign: 'center', marginTop: 2 }}
-        numberOfLines={1}
-      >
-        {level.name}
-      </Text>
+      <View style={styles.olympicTop}>
+        {topRow.map((skill) => (
+          <SkillCircle key={skill} skill={skill} points={mockSkills.points[skill]} />
+        ))}
+      </View>
+      <View style={styles.olympicBottom}>
+        {bottomRow.map((skill) => (
+          <SkillCircle key={skill} skill={skill} points={mockSkills.points[skill]} />
+        ))}
+      </View>
     </Pressable>
   );
+}
+
+function SkillCircle({ skill, points }: { skill: string; points: number }) {
+  const meta = SKILL_META[skill as keyof typeof SKILL_META];
+  const color = SKILL_COLORS[skill as keyof typeof SKILL_COLORS];
+  return (
+    <View style={styles.skillCell}>
+      <View style={[styles.skillTile, { backgroundColor: `${color}18` }]}>
+        <Ionicons name={meta.icon as any} size={36} color={color} />
+        <Text variant="caption" style={{ color, fontWeight: '700', marginTop: 6, fontSize: 15 }}>{points}</Text>
+      </View>
+      <Text variant="caption" style={{ fontWeight: '600', textAlign: 'center', marginTop: 6 }} numberOfLines={2}>
+        {meta.name}
+      </Text>
+    </View>
+  );
+}
+
+function lightenHex(hex: string, amount: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  const lr = Math.min(255, r + Math.round((255 - r) * amount));
+  const lg = Math.min(255, g + Math.round((255 - g) * amount));
+  const lb = Math.min(255, b + Math.round((255 - b) * amount));
+  return `#${lr.toString(16).padStart(2, '0')}${lg.toString(16).padStart(2, '0')}${lb.toString(16).padStart(2, '0')}`;
+}
+
+function skillTileGradient(light: string, dark: string): object {
+  return {
+    // @ts-ignore
+    backgroundImage: `linear-gradient(145deg, ${light} 0%, ${dark} 100%)`,
+  };
 }
 
 function StreaksBlock() {
@@ -179,35 +205,28 @@ function StreaksBlock() {
       <Text variant="label" tone="muted" style={{ marginBottom: spacing.sm }}>
         Streaks
       </Text>
-      <View style={styles.streaksRow}>
-        {items.map((it) => (
-          <View key={it.type} style={styles.skillCell}>
-            <View style={[styles.miniRing, webArcStyle(1)]}>
-              <View style={styles.miniRingInner}>
-                <Ionicons name="flame" size={12} color={colors.warning} />
-                <Text variant="number" style={{ marginTop: 1 }}>
-                  {it.count}
-                </Text>
-              </View>
-            </View>
-            <Text
-              variant="caption"
-              style={{ fontWeight: '600', textAlign: 'center', marginTop: 6 }}
-              numberOfLines={1}
-            >
-              {STREAK_LABEL[it.type]}
-            </Text>
-            <Text
-              variant="caption"
-              tone="muted"
-              style={{ textAlign: 'center', marginTop: 2 }}
-              numberOfLines={1}
-            >
-              {it.count} {it.count === 1 ? 'day' : 'days'}
+      {items.map((it, i) => (
+        <View
+          key={it.type}
+          style={[
+            styles.streakRow,
+            i === items.length - 1 && { borderBottomWidth: 0, marginBottom: 0 },
+          ]}
+        >
+          <View style={styles.streakFlameChip}>
+            <Ionicons name="flame" size={13} color={colors.warning} />
+            <Text variant="caption" style={{ fontWeight: '700', color: colors.warning, marginLeft: 3 }}>
+              {it.count}
             </Text>
           </View>
-        ))}
-      </View>
+          <Text variant="small" style={{ flex: 1, fontWeight: '500' }}>
+            {STREAK_LABEL[it.type]}
+          </Text>
+          <Text variant="caption" tone="muted">
+            {it.count} {it.count === 1 ? 'day' : 'days'}
+          </Text>
+        </View>
+      ))}
     </View>
   );
 }
@@ -262,7 +281,60 @@ function AllMyWorksBlock({
   );
 }
 
-function ReferralCard({ onPress }: { onPress: () => void }) {
+function JourneysBlock({ onViewAll }: { onViewAll: () => void }) {
+  const nextAvailable = masterJourneys.find((j) => j.status === 'available');
+  return (
+    <View style={styles.block}>
+      <View style={styles.blockHeader}>
+        <Text variant="label" tone="muted">Journeys</Text>
+        <Pressable onPress={onViewAll} hitSlop={8}>
+          <Text variant="small" tone="secondary" style={{ fontWeight: '600' }}>
+            Explore all ›
+          </Text>
+        </Pressable>
+      </View>
+
+      {/* Current enrolled course */}
+      {currentJourney && (
+        <Pressable onPress={onViewAll} style={styles.journeyRow}>
+          <View style={[styles.journeyIcon, { backgroundColor: `${colors.warning}15` }]}>
+            <Ionicons name="trail-sign-outline" size={18} color={colors.warning} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text variant="bodyBold">{currentJourney.title}</Text>
+            <Text variant="caption" tone="muted">{currentJourney.duration} · {currentJourney.sessions} sessions</Text>
+          </View>
+          <View style={styles.journeyChip}>
+            <Text variant="caption" style={{ fontWeight: '700', color: colors.warning }}>Enrolled</Text>
+          </View>
+        </Pressable>
+      )}
+
+      {/* Divider */}
+      {currentJourney && nextAvailable && (
+        <View style={styles.journeyDividerLine} />
+      )}
+
+      {/* Next available */}
+      {nextAvailable && (
+        <Pressable onPress={onViewAll} style={styles.journeyRow}>
+          <View style={[styles.journeyIcon, { backgroundColor: colors.surfaceAlt }]}>
+            <Ionicons name="sparkles-outline" size={18} color={colors.textSecondary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text variant="bodyBold">{nextAvailable.title}</Text>
+            <Text variant="caption" tone="muted">{nextAvailable.duration} · {nextAvailable.dateAvailable}</Text>
+          </View>
+          <Text variant="caption" tone="secondary" style={{ fontWeight: '600' }}>
+            ₹{nextAvailable.price.toLocaleString('en-IN')}
+          </Text>
+        </Pressable>
+      )}
+    </View>
+  );
+}
+
+function ReferralCard({ onPress, onDismiss }: { onPress: () => void; onDismiss: () => void }) {
   return (
     <Card style={styles.referralCard}>
       <View style={styles.referralRow}>
@@ -275,6 +347,14 @@ function ReferralCard({ onPress }: { onPress: () => void }) {
             Get ₹200 off your next renewal for every friend who joins.
           </Text>
         </View>
+        <Pressable
+          onPress={onDismiss}
+          hitSlop={8}
+          style={({ pressed }) => [styles.referralClose, pressed && { opacity: 0.6 }]}
+          accessibilityLabel="Dismiss referral"
+        >
+          <Ionicons name="close" size={16} color={colors.textSecondary} />
+        </Pressable>
       </View>
       <Button
         label="Share link"
@@ -287,12 +367,19 @@ function ReferralCard({ onPress }: { onPress: () => void }) {
   );
 }
 
-function webArcStyle(progress: number): object {
-  const p = Math.max(0, Math.min(1, progress));
-  const deg = Math.round(p * 360);
+function segmentedRingStyle(points: Record<string, number>): object {
+  const total = SKILL_ORDER.reduce((s, k) => s + points[k], 0);
+  if (total === 0) return {};
+  let deg = 0;
+  const stops: string[] = [];
+  for (const skill of SKILL_ORDER) {
+    const end = deg + (points[skill] / total) * 360;
+    stops.push(`${SKILL_COLORS[skill]} ${Math.round(deg)}deg ${Math.round(end)}deg`);
+    deg = end;
+  }
   return {
-    // @ts-ignore — react-native-web passes this through as CSS
-    backgroundImage: `conic-gradient(${colors.warning} 0deg ${deg}deg, ${colors.border} ${deg}deg 360deg)`,
+    // @ts-ignore
+    backgroundImage: `conic-gradient(${stops.join(', ')})`,
   } as object;
 }
 
@@ -309,8 +396,9 @@ const styles = StyleSheet.create({
   },
   headerTopRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     alignItems: 'center',
+    marginBottom: spacing.sm,
   },
   gearBtn: {
     width: 36,
@@ -323,14 +411,27 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerContent: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.sm,
+    gap: spacing.lg,
+    paddingVertical: spacing.sm,
+  },
+  headerText: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  avatarRing: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
   },
   avatar: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
+    width: 68,
+    height: 68,
+    borderRadius: 34,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
@@ -352,7 +453,22 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
 
-  // Skills — Olympics
+  // Journey stats
+  journeyStats: {
+    flexDirection: 'row',
+    marginTop: spacing.md,
+  },
+  journeyStat: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  journeyDivider: {
+    width: 1,
+    backgroundColor: colors.divider,
+    marginVertical: 2,
+  },
+
+  // Skills — Olympics circles
   olympicTop: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -366,29 +482,41 @@ const styles = StyleSheet.create({
   },
   skillCell: {
     alignItems: 'center',
-    width: 96,
+    width: 80,
   },
-  miniRing: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: colors.border,
+  skillTile: {
+    width: 80,
+    height: 88,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 10,
   },
-  miniRingInner: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.surface,
+  skillIconBg: {
+    width: 54,
+    height: 54,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
 
   // Streaks
-  streaksRow: {
+  streakRow: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.divider,
+    marginBottom: 2,
+  },
+  streakFlameChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(209,141,30,0.12)',
+    borderRadius: radius.pill,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
 
   // All my works
@@ -399,6 +527,33 @@ const styles = StyleSheet.create({
   },
   workTile: {
     width: '48%',
+  },
+
+  // Journeys block
+  journeyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
+  journeyIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  journeyChip: {
+    backgroundColor: `${colors.warning}18`,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+  },
+  journeyDividerLine: {
+    height: 1,
+    backgroundColor: colors.divider,
+    marginVertical: 2,
   },
 
   // Referral
@@ -412,6 +567,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.md,
+  },
+  referralClose: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.surfaceAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
   },
   referralIcon: {
     width: 40,

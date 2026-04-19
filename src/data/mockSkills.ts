@@ -93,6 +93,22 @@ export const SKILL_LEVEL_DESCRIPTIONS: Record<SkillType, string[]> = {
   ],
 };
 
+export const SKILL_COLORS: Record<SkillType, string> = {
+  observation:     '#4A8FD9',
+  structure:       '#D18D1E',
+  expression:      '#9B5DB8',
+  creativity:      '#4EAD7A',
+  problem_solving: '#D9715A',
+};
+
+export const LEVEL_DESCRIPTIONS: string[] = [
+  'Discovering drawing fundamentals — basic shapes, marks, and observation of simple objects.',
+  'Building form and structure; combining shapes into recognisable objects with growing confidence.',
+  'Drawing with increasing depth — proportion, overlap, and a developing personal style.',
+  'Consistent technique across all areas; artwork shows both skill and intentional expression.',
+  'Mastery of core drawing skills — complex compositions, strong observation, and clear originality.',
+];
+
 export function levelFor(points: number): Level {
   for (let i = LEVELS.length - 1; i >= 0; i--) {
     if (points >= LEVELS[i].min) return LEVELS[i];

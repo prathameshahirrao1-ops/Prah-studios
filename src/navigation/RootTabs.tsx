@@ -2,17 +2,19 @@ import React from 'react';
 import { Platform, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
+import type { NavigatorScreenParams } from '@react-navigation/native';
 import { HomeScreen } from '../screens/HomeScreen';
 import { JourneyScreen } from '../screens/JourneyScreen';
 import { CommunityScreen } from '../screens/CommunityScreen';
 import { ProfileStack } from './ProfileStack';
+import type { ProfileStackParamList } from './ProfileStack';
 import { colors, spacing } from '../theme';
 
 export type RootTabParamList = {
   Journey: undefined;
   Home: undefined;
   Community: undefined;
-  Profile: undefined;
+  Profile: NavigatorScreenParams<ProfileStackParamList> | undefined;
 };
 
 const Tab = createBottomTabNavigator<RootTabParamList>();

@@ -1,20 +1,20 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ProfileScreen } from '../screens/ProfileScreen';
-import { SkillDetailScreen } from '../screens/profile/SkillDetailScreen';
+import { LevelDetailScreen } from '../screens/profile/LevelDetailScreen';
 import { AllMyWorksScreen } from '../screens/profile/AllMyWorksScreen';
 import { ReferralScreen } from '../screens/profile/ReferralScreen';
 import { SettingsScreen } from '../screens/profile/SettingsScreen';
 import { NotificationsScreen } from '../screens/profile/NotificationsScreen';
 import { AccountScreen } from '../screens/profile/AccountScreen';
 import { BillingScreen } from '../screens/profile/BillingScreen';
-import { SkillType } from '../data/mockSkills';
-
+import { JourneysScreen } from '../screens/profile/JourneysScreen';
 export type ProfileStackParamList = {
   ProfileMain: undefined;
-  SkillDetail: { skill: SkillType };
+  LevelDetail: undefined;
   AllMyWorks: undefined;
   Referral: undefined;
+  Journeys: undefined;
   Settings: undefined;
   SettingsNotifications: undefined;
   SettingsAccount: undefined;
@@ -32,9 +32,10 @@ export function ProfileStack() {
       }}
     >
       <Stack.Screen name="ProfileMain" component={ProfileScreen} />
-      <Stack.Screen name="SkillDetail" component={SkillDetailScreen} />
+      <Stack.Screen name="LevelDetail" component={LevelDetailScreen} />
       <Stack.Screen name="AllMyWorks" component={AllMyWorksScreen} />
       <Stack.Screen name="Referral" component={ReferralScreen} />
+      <Stack.Screen name="Journeys" component={JourneysScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />
       <Stack.Screen name="SettingsNotifications" component={NotificationsScreen} />
       <Stack.Screen name="SettingsAccount" component={AccountScreen} />
