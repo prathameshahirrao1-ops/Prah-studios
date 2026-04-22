@@ -1,6 +1,6 @@
 # Prah Studio · Handoff Note
 
-_Last updated: 17 April 2026 · Session 1 complete_
+_Last updated: 22 April 2026 · Session 2 complete_
 
 Read this first when starting a new Claude Code session on this repo. Pair it
 with `~/Downloads/Prah-Studio/Prah_Studio_Build_Context.docx` (the authoritative
@@ -48,17 +48,23 @@ screen list + IA).
 | 25 | HW submission popup (4 states: empty/preview/confirm/done + view-only) | ✅ Full |
 | — | HW submission celebration (green glow halo + checkmark pop-in + auto-close) | ✅ Full |
 | C | In-app Chat (text only, day dividers, quick-action chips on class days) | ✅ Full |
-| 33 | Profile — main (list of sections) | ✅ Stub rows |
-| 36/37 | Journeys + Journey detail | ⚠️ Stub row |
-| 34 | Account details | ❌ Not built |
-| 35 | All My Works | ❌ Not built |
-| 39 | Billing history | ❌ Not built |
-| 40 | Settings | ❌ Not built |
+| 33 | Profile — bento dashboard (skills, streaks, works, journeys) | ✅ Full |
+| 34 | Account details | ✅ Full |
+| 35 | All My Works | ✅ Full |
+| 36/37 | Journeys list + Journey detail popup | ✅ Full (Explorer-first tabs, Master + Explorer courses, skills-gained, enroll CTA) |
+| 38 | Referral | ✅ Full |
+| 39 | Billing history | ✅ Full |
+| 40 | Settings + Notifications | ✅ Full |
+| 26 | Quiz (3 questions, per-skill points) | ✅ Full |
+| 27 | GK Carousel (3 slides/day) | ✅ Full |
+| 1 | Onboarding — Splash | ✅ Full (auto-advance 1.4s) |
+| 2 | Onboarding — Welcome carousel (3 slides) | ✅ Full |
+| 3 | Onboarding — Profile setup (child + parent + age) | ✅ Full |
+| — | Home "Your journeys" block (current + next Explorer workshop) | ✅ Full |
 
 ### Parked / intentionally skipped
 
-- **V2 screens:** Quiz (26), GK Carousel (27), Milestone (28), Community tab (29–32), Referral (38), Notification Center (42)
-- **Onboarding (1–3):** Splash, Welcome, Profile setup — user decided to start with enrolled flow and circle back
+- **V2 screens:** Milestone (28), Community tab (29–32), Notification Center (42)
 - **Payment flow (5–13):** Trial card, Address popup, Payment ₹200/₹4,500, Confirmation, Celebration, Enrollment tour — deferred till after enrolled experience is locked
 - **Brand Pass 2:** Everything is currently in neutrals (grey/black/white). Brand purple `#1A0533`, gold `#C9A84C`, lavender `#F5F0FF` will be applied by swapping values in `src/theme/colors.ts` only.
 
@@ -78,7 +84,7 @@ git push
 Never have the user paste a token into the chat — they paste directly into the
 Terminal password prompt.
 
-Latest commit on `main`: `9e13d31 Home states: class ongoing + post-class summary + idle`
+Latest commit on `main`: `fc9502d Journeys: Home block + Explorer-first on Profile & Journeys tabs`
 
 ---
 
@@ -123,7 +129,7 @@ These are locked — see Build Context §02 and §11 for reasoning.
 - **No Figma.** Claude builds high-fi directly from paper mocks. There are paper wireframes for the major screens (see WhatsApp Unknown 2026-04-13 folder).
 - **Mock data lives in `src/data/`.** Everything in `mockStudent.ts`, `mockChat.ts`, `homeState.ts`. Replaced with Firestore reads at the "Backend wiring" milestone (weeks 5–7 per Build Context §07).
 - **All popups use the shared `<Popup>` component** (`src/components/Popup.tsx`) — bottom-sheet-style Modal wrapper with X close, scrollable body.
-- **Navigation:** 4 tabs via `@react-navigation/bottom-tabs`. Cross-screen flows (Chat, HW popup) are full-screen modals from `react-native` rather than navigator routes. This keeps the tree shallow; refactor to stack navigators if/when the Profile sub-screens get built.
+- **Navigation:** `RootNavigator` (native stack) wraps `Splash → Welcome → ProfileSetup → MainApp`. `MainApp` is the 4-tab `RootTabs`. The Profile tab is its own native stack (`ProfileStack`) so sub-screens (Account, Journeys, Billing, Settings, etc.) push/pop with headers. Cross-screen flows (Chat, HW popup, GK carousel) remain full-screen `Modal` from `react-native` to keep the tree shallow.
 - **State:** Plain React `useState` for Pass 1. No Redux, Zustand, Context yet. Cross-screen state (e.g. HW submitted → timeline celebrates) is lifted to the nearest parent (`JourneyScreen`).
 
 ---
@@ -132,32 +138,48 @@ These are locked — see Build Context §02 and §11 for reasoning.
 
 ```
 Prah-studios/
-├── App.tsx                          NavigationContainer + SafeAreaProvider
+├── App.tsx                          NavigationContainer + SafeAreaProvider + RootNavigator
 ├── app.json                         Expo config · name "Prah Studio"
 ├── HANDOFF.md                       ← this file
 ├── README.md
 ├── .claude/launch.json              Expo web preview config
 ├── src/
 │   ├── screens/
-│   │   ├── HomeScreen.tsx           ⭐ state-driven, 4 variants
+│   │   ├── HomeScreen.tsx           ⭐ state-driven, 4 variants + "Your journeys" block
 │   │   ├── JourneyScreen.tsx        ⭐ shell with 3 sub-tabs + popups
 │   │   ├── CommunityScreen.tsx      V2 stub (locked)
-│   │   ├── ProfileScreen.tsx       List of sections + Chat modal
+│   │   ├── ProfileScreen.tsx       Bento dashboard (skills, streaks, works, journeys, referral)
 │   │   ├── ChatScreen.tsx           In-app chat
+│   │   ├── onboarding/
+│   │   │   ├── SplashScreen.tsx          auto-advance to Welcome
+│   │   │   ├── WelcomeScreen.tsx         3-slide paging carousel
+│   │   │   └── ProfileSetupScreen.tsx    child + parent + age form
 │   │   ├── home/
 │   │   │   ├── LiveClassCard.tsx
 │   │   │   ├── PostClassCard.tsx
-│   │   │   └── DevStateSwitcher.tsx   ← remove before production
-│   │   └── journey/
-│   │       ├── TimelineTab.tsx      Nodes, cards, celebration wrapper
-│   │       ├── PeersTab.tsx
-│   │       ├── MyWorkTab.tsx
-│   │       ├── SessionPopup.tsx
-│   │       ├── PeerPopup.tsx
-│   │       └── HwSubmissionPopup.tsx
+│   │   │   └── DevStateSwitcher.tsx       ← remove before production
+│   │   ├── journey/
+│   │   │   ├── TimelineTab.tsx       Nodes, cards, celebration wrapper
+│   │   │   ├── PeersTab.tsx
+│   │   │   ├── MyWorkTab.tsx
+│   │   │   ├── SessionPopup.tsx
+│   │   │   ├── PeerPopup.tsx
+│   │   │   ├── HwSubmissionPopup.tsx
+│   │   │   ├── QuizScreen.tsx        3Q per-skill points
+│   │   │   └── GkCarouselScreen.tsx  3 daily slides
+│   │   └── profile/
+│   │       ├── JourneysScreen.tsx    Explorer-first tabs, Master + Explorer courses
+│   │       ├── AccountScreen.tsx
+│   │       ├── AllMyWorksScreen.tsx
+│   │       ├── BillingScreen.tsx
+│   │       ├── SettingsScreen.tsx
+│   │       ├── NotificationsScreen.tsx
+│   │       ├── ReferralScreen.tsx
+│   │       ├── LevelDetailScreen.tsx
+│   │       └── FullImageView.tsx
 │   ├── components/
 │   │   ├── Screen.tsx               safe-area wrapper
-│   │   ├── Text.tsx                 H1/H2/body/label variants
+│   │   ├── Text.tsx                 H1/H2/body/label/caption + Georgia serif for display
 │   │   ├── Card.tsx
 │   │   ├── Button.tsx               primary/secondary/ghost
 │   │   ├── Chip.tsx                 neutral/success/warning/error tones
@@ -167,16 +189,24 @@ Prah-studios/
 │   │   ├── Stars.tsx
 │   │   └── ImagePlaceholder.tsx     grey box with image icon (Pass 1)
 │   ├── navigation/
-│   │   └── RootTabs.tsx             4-tab bottom nav
+│   │   ├── RootNavigator.tsx        Splash → Welcome → ProfileSetup → MainApp
+│   │   ├── RootTabs.tsx             4-tab bottom nav (Journey · Home · Community · Profile)
+│   │   └── ProfileStack.tsx         Profile + sub-screens (native stack)
 │   ├── theme/
 │   │   ├── colors.ts                🎯 swap values here for Pass 2 brand
 │   │   ├── spacing.ts               4pt scale
-│   │   ├── typography.ts            will add expo-font for DM Serif/Sans later
+│   │   ├── typography.ts            Georgia serif display + variants
 │   │   └── index.ts
 │   └── data/
 │       ├── mockStudent.ts           student, timeline, tasks, peers, artworks
 │       ├── mockChat.ts              chat thread + messages
-│       └── homeState.ts             home-state evaluator + dev presets
+│       ├── homeState.ts             home-state evaluator + dev presets
+│       ├── mockSkills.ts            5-skill system + colors + level curve
+│       ├── mockStreaks.ts           HW / Quiz / GK streak counts
+│       ├── mockJourneys.ts          Master + Explorer courses (currentJourney helper)
+│       ├── mockGkCarousel.ts
+│       ├── mockBilling.ts
+│       └── mockNotifications.ts
 └── assets/
     └── (icon, splash, adaptive icon placeholders)
 ```
@@ -198,9 +228,9 @@ Prah-studios/
 ### Fastest "looks done" path
 1. **Pass 2 brand application** — swap `src/theme/colors.ts` to brand values, add `expo-font` with DM Serif Display + DM Sans. All screens transform at once. **~1 session.**
 2. **Remove DevStateSwitcher** before merging Pass 2 (one-line change — delete the `<DevStateSwitcher>` JSX in `HomeScreen.tsx`).
-3. **Profile sub-screens** — Account, All Works, Journeys → Journey detail, Billing, Settings. Mostly list layouts. **~1 session.**
-4. **Onboarding** — Splash, Welcome, Profile setup. **~½ session.**
-5. **Demo + Enrollment payment flow** (Trial card, Address popup, Pay ₹200, Confirmation, Course page, Enrollment card, Pay ₹4,500, Celebration, Tour). Razorpay integration needs an Expo development build — defer until Week 8 per Build Context §07. **~2 sessions + Razorpay setup.**
+3. **Demo + Enrollment payment flow** (Trial card, Address popup, Pay ₹200, Confirmation, Course page, Enrollment card, Pay ₹4,500, Celebration, Tour). Razorpay integration needs an Expo development build — defer until Week 8 per Build Context §07. **~2 sessions + Razorpay setup.**
+4. **Milestone celebration (#28)** — resolve design, then wire into timeline.
+5. **Community tab** — deferred V2 scope per product doc.
 
 ### Backend wiring (weeks 5–7 of Build Context)
 After all UI is done, swap every `mockXxx` import for Firestore reads. Each mock file has a comment at the top pointing to the Firestore path.
@@ -231,6 +261,6 @@ After all UI is done, swap every `mockXxx` import for Firestore reads. Each mock
 
 Paste this at the top of the next Claude Code session:
 
-> "Read `HANDOFF.md` in `~/Downloads/Prah-Studio/repos/Prah-studios/`. We were building the Prah Studio parent app. Last commit was `9e13d31` (Home states). Let's continue — tell me the current state and propose the next block."
+> "Read `HANDOFF.md` in `~/Downloads/Prah-Studio/repos/Prah-studios/`. We were building the Prah Studio parent app. Last commit was `fc9502d` (Journeys home block + Explorer-first). Let's continue — tell me the current state and propose the next block."
 
 Claude will read this file, confirm status, and be back on track within one turn.
