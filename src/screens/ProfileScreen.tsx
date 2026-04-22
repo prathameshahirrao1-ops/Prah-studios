@@ -12,7 +12,7 @@ import { ImagePlaceholder } from '../components/ImagePlaceholder';
 import { colors, radius, spacing } from '../theme';
 import { mockArtworks, mockStudent } from '../data/mockStudent';
 import { mockStreaks, STREAK_LABEL, StreakType } from '../data/mockStreaks';
-import { masterJourneys, currentJourney } from '../data/mockJourneys';
+import { explorerJourneys, currentJourney } from '../data/mockJourneys';
 import {
   SKILL_COLORS,
   SKILL_META,
@@ -72,8 +72,6 @@ export function ProfileScreen() {
           </View>
         </View>
 
-        <CurrentJourneyBlock />
-
         {!referralDismissed && (
           <ReferralCard
             onPress={() => navigation.navigate('Referral')}
@@ -100,38 +98,6 @@ export function ProfileScreen() {
         onClose={() => setOpenArtworkId(null)}
       />
     </Screen>
-  );
-}
-
-function CurrentJourneyBlock() {
-  const s = mockStudent;
-  const classPct = s.classesAttended / s.classesTotal;
-  return (
-    <View style={styles.block}>
-      <View style={styles.blockHeader}>
-        <Text variant="label" tone="muted">Current journey</Text>
-        <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-      </View>
-      <Text variant="h2" style={{ marginBottom: 2 }}>{s.course}</Text>
-      <Text variant="small" tone="muted" style={{ marginBottom: spacing.md }}>{s.joinedDate}</Text>
-      <ProgressBar value={classPct} />
-      <View style={styles.journeyStats}>
-        <View style={styles.journeyStat}>
-          <Text variant="bodyBold">{s.classesAttended}/{s.classesTotal}</Text>
-          <Text variant="caption" tone="muted">Classes</Text>
-        </View>
-        <View style={styles.journeyDivider} />
-        <View style={styles.journeyStat}>
-          <Text variant="bodyBold">{s.hwSubmitted}/{s.hwTotal}</Text>
-          <Text variant="caption" tone="muted">Homework</Text>
-        </View>
-        <View style={styles.journeyDivider} />
-        <View style={styles.journeyStat}>
-          <Text variant="bodyBold">{s.quizzesDone}</Text>
-          <Text variant="caption" tone="muted">Quizzes</Text>
-        </View>
-      </View>
-    </View>
   );
 }
 
@@ -282,7 +248,7 @@ function AllMyWorksBlock({
 }
 
 function JourneysBlock({ onViewAll }: { onViewAll: () => void }) {
-  const nextAvailable = masterJourneys.find((j) => j.status === 'available');
+  const nextAvailable = explorerJourneys.find((j) => j.status === 'available');
   return (
     <View style={styles.block}>
       <View style={styles.blockHeader}>
@@ -325,9 +291,11 @@ function JourneysBlock({ onViewAll }: { onViewAll: () => void }) {
             <Text variant="bodyBold">{nextAvailable.title}</Text>
             <Text variant="caption" tone="muted">{nextAvailable.duration} · {nextAvailable.dateAvailable}</Text>
           </View>
-          <Text variant="caption" tone="secondary" style={{ fontWeight: '600' }}>
-            ₹{nextAvailable.price.toLocaleString('en-IN')}
-          </Text>
+          <View style={styles.journeyChipNeutral}>
+            <Text variant="caption" style={{ fontWeight: '700', color: colors.textSecondary }}>
+              Upcoming
+            </Text>
+          </View>
         </Pressable>
       )}
     </View>
@@ -546,6 +514,12 @@ const styles = StyleSheet.create({
   },
   journeyChip: {
     backgroundColor: `${colors.warning}18`,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+  },
+  journeyChipNeutral: {
+    backgroundColor: colors.surfaceAlt,
     borderRadius: radius.pill,
     paddingHorizontal: spacing.sm,
     paddingVertical: 3,

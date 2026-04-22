@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Modal, ScrollView, StyleSheet, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NavigationProp } from '@react-navigation/native';
@@ -12,6 +12,7 @@ import { Chip } from '../components/Chip';
 import { ProgressBar } from '../components/ProgressBar';
 import { colors, radius, spacing } from '../theme';
 import { mockStudent, mockTimeline } from '../data/mockStudent';
+import { currentJourney, explorerJourneys } from '../data/mockJourneys';
 import {
   HwSubmissionPopup,
   HwSubmissionContext,
@@ -185,6 +186,15 @@ export function HomeScreen() {
             </Card>
           )}
 
+        {/* Your journeys — hidden during class, otherwise always present */}
+        {homeCtx.state !== 'class_ongoing' && (
+          <JourneysHomeBlock
+            onViewAll={() =>
+              rootNav.navigate('Profile', { screen: 'Journeys' } as any)
+            }
+          />
+        )}
+
         {/* Engagement zone — hidden during class, otherwise always present */}
         {homeCtx.state !== 'class_ongoing' && (
           <>
@@ -221,26 +231,6 @@ export function HomeScreen() {
                 <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
               </View>
             </Card>
-
-            <Card
-              compact
-              onPress={() =>
-                rootNav.navigate('Profile', { screen: 'Journeys' } as any)
-              }
-            >
-              <View style={styles.engRow}>
-                <View style={styles.engIcon}>
-                  <Ionicons name="trail-sign-outline" size={20} color={colors.textPrimary} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text variant="bodyBold">Explore journeys</Text>
-                  <Text variant="small" tone="muted">
-                    Workshops & courses to discover
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-              </View>
-            </Card>
           </>
         )}
 
@@ -262,6 +252,64 @@ export function HomeScreen() {
         />
       </Modal>
     </Screen>
+  );
+}
+
+function JourneysHomeBlock({ onViewAll }: { onViewAll: () => void }) {
+  const nextAvailable = explorerJourneys.find((j) => j.status === 'available');
+  return (
+    <Card>
+      <View style={styles.jHeader}>
+        <Text variant="label" tone="muted">
+          Your journeys
+        </Text>
+        <Pressable onPress={onViewAll} hitSlop={8}>
+          <Text variant="small" tone="secondary" style={{ fontWeight: '600' }}>
+            Explore all ›
+          </Text>
+        </Pressable>
+      </View>
+
+      {currentJourney && (
+        <Pressable onPress={onViewAll} style={styles.jRow}>
+          <View style={[styles.jIcon, { backgroundColor: `${colors.warning}15` }]}>
+            <Ionicons name="trail-sign-outline" size={18} color={colors.warning} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text variant="bodyBold">{currentJourney.title}</Text>
+            <Text variant="caption" tone="muted">
+              {currentJourney.duration} · {currentJourney.sessions} sessions
+            </Text>
+          </View>
+          <View style={styles.jChip}>
+            <Text variant="caption" style={{ fontWeight: '700', color: colors.warning }}>
+              Enrolled
+            </Text>
+          </View>
+        </Pressable>
+      )}
+
+      {currentJourney && nextAvailable && <View style={styles.jDivider} />}
+
+      {nextAvailable && (
+        <Pressable onPress={onViewAll} style={styles.jRow}>
+          <View style={[styles.jIcon, { backgroundColor: colors.surfaceAlt }]}>
+            <Ionicons name="sparkles-outline" size={18} color={colors.textSecondary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text variant="bodyBold">{nextAvailable.title}</Text>
+            <Text variant="caption" tone="muted">
+              {nextAvailable.duration} · {nextAvailable.dateAvailable}
+            </Text>
+          </View>
+          <View style={styles.jChipNeutral}>
+            <Text variant="caption" style={{ fontWeight: '700', color: colors.textSecondary }}>
+              Upcoming
+            </Text>
+          </View>
+        </Pressable>
+      )}
+    </Card>
   );
 }
 
@@ -381,5 +429,44 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceAlt,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+
+  // Journeys block
+  jHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    marginBottom: spacing.sm,
+  },
+  jRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
+  jIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  jChip: {
+    backgroundColor: `${colors.warning}18`,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+  },
+  jChipNeutral: {
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+  },
+  jDivider: {
+    height: 1,
+    backgroundColor: colors.divider,
+    marginVertical: 2,
   },
 });

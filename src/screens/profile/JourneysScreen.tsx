@@ -22,7 +22,7 @@ type Tab = 'master' | 'explorer';
 
 export function JourneysScreen() {
   const navigation = useNavigation();
-  const [tab, setTab] = useState<Tab>('master');
+  const [tab, setTab] = useState<Tab>('explorer');
   const [selected, setSelected] = useState<JourneyCourse | null>(null);
 
   const courses = tab === 'master' ? masterJourneys : explorerJourneys;
@@ -43,8 +43,8 @@ export function JourneysScreen() {
 
       <SubTabs
         tabs={[
-          { key: 'master', label: 'Master courses' },
           { key: 'explorer', label: 'Explorer workshops' },
+          { key: 'master', label: 'Master courses' },
         ]}
         active={tab}
         onChange={(k) => setTab(k as Tab)}
