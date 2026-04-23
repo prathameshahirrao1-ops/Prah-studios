@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '../components/Screen';
 import { Text } from '../components/Text';
-import { Card } from '../components/Card';
 import { SubTabs } from '../components/SubTabs';
 import { ImagePlaceholder } from '../components/ImagePlaceholder';
 import { colors, radius, spacing } from '../theme';
@@ -26,6 +25,7 @@ import {
 } from './journey/HwSubmissionPopup';
 import { QuizScreen } from './journey/QuizScreen';
 import { GkCarouselScreen } from './journey/GkCarouselScreen';
+import { VenueCard } from './journey/VenueCard';
 import { FullImagePopover } from './profile/FullImageView';
 import { findQuizForTask, Quiz } from '../data/mockQuizzes';
 import { mockGkToday } from '../data/mockGkCarousel';
@@ -59,6 +59,8 @@ export function JourneyScreen() {
   const [completedGkTaskIds, setCompletedGkTaskIds] = useState<Set<string>>(new Set());
   // Artwork popover state — shared across MyWorkTab, SessionPopup, PeerPopup.
   const [openArtworkId, setOpenArtworkId] = useState<string | null>(null);
+  // Outer scroll ref — timeline auto-scrolls to today's row on first mount.
+  const scrollRef = useRef<ScrollView>(null);
 
   const openHwForTask = (t: TimelineTask) => {
     // Prefer the task's explicit sessionId; otherwise match by same-date attended session.
@@ -114,6 +116,7 @@ export function JourneyScreen() {
   return (
     <Screen padded={false}>
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
         stickyHeaderIndices={[1]}
@@ -128,9 +131,6 @@ export function JourneyScreen() {
             />
             <View style={{ flex: 1, marginLeft: spacing.md }}>
               <Text variant="h2">{s.course}</Text>
-              <Text variant="small" tone="muted" style={{ marginTop: 2 }}>
-                {s.joinedDate}
-              </Text>
             </View>
             <Pressable
               onPress={() => setChatOpen(true)}
@@ -158,6 +158,8 @@ export function JourneyScreen() {
             <Divider />
             <Stat value={`${s.quizzesDone}`} label="Quizzes" />
           </View>
+
+          <VenueCard venue={s.venue} />
         </View>
 
         {/* Sticky sub-tabs */}
@@ -169,6 +171,7 @@ export function JourneyScreen() {
         <View style={styles.content}>
           {active === 'timeline' && (
             <TimelineTab
+              scrollRef={scrollRef}
               onTapSession={(sess) => setSessionOpen(sess)}
               onTapHwTask={openHwForTask}
               onTapQuizTask={openQuizForTask}

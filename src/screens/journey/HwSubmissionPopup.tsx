@@ -14,6 +14,7 @@ import { Button } from '../../components/Button';
 import { Chip } from '../../components/Chip';
 import { colors, radius, spacing } from '../../theme';
 import { HwStatus, TimelineSession } from '../../data/mockStudent';
+import { formatHwDue } from '../../utils/formatHw';
 
 /**
  * HW Submission Popup — Screen #25
@@ -113,7 +114,7 @@ export function HwSubmissionPopup({ context, onClose, onSubmitted }: Props) {
           {/* Meta row */}
           <View style={styles.metaRow}>
             <Text variant="small" tone="muted">
-              Session {context.session.sessionNumber} · Due {formatDate(context.session.date, 3)}
+              Session {context.session.sessionNumber} · {formatHwDue(addDaysIso(context.session.date, 3), 20)}
             </Text>
             {isViewOnly && (
               <Chip
@@ -287,10 +288,10 @@ function ShareToggle({
   );
 }
 
-function formatDate(iso: string, addDays = 0): string {
+function addDaysIso(iso: string, days: number): string {
   const d = new Date(iso);
-  d.setDate(d.getDate() + addDays);
-  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+  d.setDate(d.getDate() + days);
+  return d.toISOString();
 }
 
 const styles = StyleSheet.create({

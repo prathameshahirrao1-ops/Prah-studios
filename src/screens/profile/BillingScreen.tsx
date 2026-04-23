@@ -6,6 +6,7 @@ import { useNavigation } from '@react-navigation/native';
 import { Text } from '../../components/Text';
 import { Chip } from '../../components/Chip';
 import { colors, radius, spacing } from '../../theme';
+import { formatDateWithYear } from '../../utils/formatDate';
 
 interface Txn {
   id: string;
@@ -90,7 +91,7 @@ export function BillingScreen() {
               <View style={{ alignItems: 'flex-end' }}>
                 <Text variant="number">₹{t.amount.toLocaleString('en-IN')}</Text>
                 <Text variant="caption" tone="muted" style={{ marginTop: 2 }}>
-                  {formatDate(t.date)}
+                  {formatDateWithYear(t.date)}
                 </Text>
               </View>
             </View>
@@ -113,15 +114,6 @@ export function BillingScreen() {
       </ScrollView>
     </SafeAreaView>
   );
-}
-
-function formatDate(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleDateString('en-IN', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
 }
 
 const styles = StyleSheet.create({

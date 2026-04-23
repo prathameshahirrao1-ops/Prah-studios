@@ -7,6 +7,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Text } from '../../components/Text';
 import { ImagePlaceholder } from '../../components/ImagePlaceholder';
 import { colors, radius, spacing } from '../../theme';
+import { formatDate } from '../../utils/formatDate';
 import { mockArtworks, Artwork } from '../../data/mockStudent';
 import type { ProfileStackParamList } from '../../navigation/ProfileStack';
 import { FullImagePopover } from './FullImageView';
@@ -114,11 +115,6 @@ export function AllMyWorksScreen() {
       />
     </SafeAreaView>
   );
-}
-
-function formatDate(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
 }
 
 const styles = StyleSheet.create({
