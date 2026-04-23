@@ -6,6 +6,7 @@ import { ImagePlaceholder } from '../../components/ImagePlaceholder';
 import { Chip } from '../../components/Chip';
 import { colors, radius, spacing } from '../../theme';
 import { findArtworkById } from '../../data/mockStudent';
+import { formatDateWithYear } from '../../utils/formatDate';
 
 interface Props {
   artworkId: string | null;
@@ -50,7 +51,7 @@ export function FullImagePopover({ artworkId, onClose }: Props) {
               <View style={styles.tagRow}>
                 <Chip label={`Session ${artwork.sessionNumber}`} tone="neutral" />
                 <Text variant="small" tone="muted">
-                  {formatDate(artwork.date)}
+                  {formatDateWithYear(artwork.date)}
                 </Text>
               </View>
               <Text variant="h3" style={{ marginTop: spacing.md }}>
@@ -65,15 +66,6 @@ export function FullImagePopover({ artworkId, onClose }: Props) {
       </Pressable>
     </Modal>
   );
-}
-
-function formatDate(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleDateString('en-IN', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
 }
 
 const styles = StyleSheet.create({

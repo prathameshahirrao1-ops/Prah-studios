@@ -1,5 +1,13 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, Easing, Pressable, StyleSheet, View } from 'react-native';
+import {
+  Animated,
+  Easing,
+  LayoutChangeEvent,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '../../components/Text';
 import { Card } from '../../components/Card';
@@ -14,6 +22,8 @@ import {
 } from '../../data/mockStudent';
 import { mockStreaks } from '../../data/mockStreaks';
 import { StreakFooter } from '../../components/StreakFooter';
+import { formatDateWithWeekday } from '../../utils/formatDate';
+import { TimelineSessionCard } from './TimelineSessionCard';
 
 interface Props {
   onTapSession: (session: TimelineSession) => void;
@@ -26,6 +36,8 @@ interface Props {
   justSubmittedHwTaskId?: string | null;
   /** Tap on "Not there on this day?" on an upcoming session card. */
   onTapNotThere?: (session: TimelineSession) => void;
+  /** Parent scroll view — timeline auto-scrolls to today's row on first mount. */
+  scrollRef?: React.RefObject<ScrollView | null>;
 }
 
 /**
@@ -75,9 +87,27 @@ export function TimelineTab({
   extraCompletedTaskIds,
   justSubmittedHwTaskId,
   onTapNotThere,
+  scrollRef,
 }: Props) {
   const today = new Date().toISOString().slice(0, 10);
   const groups = buildDayGroups(today);
+  const didScrollRef = useRef(false);
+  const todayYRef = useRef<number | null>(null);
+
+  // Capture today's row Y via onLayout. Once it's measured we scroll the
+  // outer ScrollView to it, leaving a small peek above so history is hinted.
+  const handleTodayLayout = (e: LayoutChangeEvent) => {
+    todayYRef.current = e.nativeEvent.layout.y;
+    if (didScrollRef.current) return;
+    const scrollView = scrollRef?.current;
+    if (!scrollView) return;
+    didScrollRef.current = true;
+    scrollView.scrollTo({
+      y: Math.max(0, e.nativeEvent.layout.y - 40),
+      animated: false,
+    });
+  };
+
   return (
     <View style={styles.container}>
       {groups.map((g, i) => (
@@ -87,6 +117,7 @@ export function TimelineTab({
           today={today}
           isFirst={i === 0}
           isLast={i === groups.length - 1}
+          onTodayLayout={g.date === today ? handleTodayLayout : undefined}
           onTapSession={onTapSession}
           onTapHwTask={onTapHwTask}
           onTapQuizTask={onTapQuizTask}
@@ -105,6 +136,7 @@ function TimelineRow({
   today,
   isFirst,
   isLast,
+  onTodayLayout,
   onTapSession,
   onTapHwTask,
   onTapQuizTask,
@@ -117,6 +149,7 @@ function TimelineRow({
   today: string;
   isFirst: boolean;
   isLast: boolean;
+  onTodayLayout?: (e: LayoutChangeEvent) => void;
   onTapSession: (s: TimelineSession) => void;
   onTapHwTask: (t: TimelineTask) => void;
   onTapQuizTask: (t: TimelineTask) => void;
@@ -125,7 +158,7 @@ function TimelineRow({
   justSubmittedHwTaskId?: string | null;
   onTapNotThere?: (s: TimelineSession) => void;
 }) {
-  const dateLabel = formatShortDate(group.date);
+  const dateLabel = formatDateWithWeekday(group.date);
   const isToday = group.date === today;
   const isPast = group.date < today;
 
@@ -140,13 +173,8 @@ function TimelineRow({
     nodeVariant = 'upcoming';
   }
 
-  const base = group.session
-    ? `${dateLabel} · Session ${group.session.sessionNumber}`
-    : `${dateLabel} · Tasks`;
-  const headline = isToday ? `Today · ${base}` : base;
-
   return (
-    <View style={styles.row}>
+    <View onLayout={onTodayLayout} style={styles.row}>
       {/* Gutter: connector line + dot */}
       <View style={styles.gutter}>
         {!isFirst && <View style={styles.connector} />}
@@ -155,14 +183,25 @@ function TimelineRow({
       </View>
 
       {/* Content */}
-      <View style={styles.content}>
-        <Text variant="label" tone="muted">
-          {headline}
-        </Text>
+      <View style={[styles.content, isToday && styles.contentToday]}>
+        <View style={styles.dateRow}>
+          {isToday && (
+            <View style={styles.todayPill}>
+              <Text variant="caption" style={styles.todayPillText}>
+                TODAY
+              </Text>
+            </View>
+          )}
+          <Text variant="caption" tone="muted" style={styles.dateLabel}>
+            {dateLabel}
+          </Text>
+        </View>
 
         {group.session && (
-          <SessionCard
+          <TimelineSessionCard
             session={group.session}
+            isPast={isPast}
+            isToday={isToday}
             onPress={() => onTapSession(group.session!)}
             onPressNotThere={
               onTapNotThere ? () => onTapNotThere(group.session!) : undefined
@@ -255,97 +294,6 @@ function TodayDot() {
       />
       <View style={styles.dotToday} />
     </View>
-  );
-}
-
-function SessionTypeIcon() {
-  return (
-    <View style={styles.sessionTypeIcon}>
-      <Ionicons name="brush-outline" size={18} color={colors.textPrimary} />
-    </View>
-  );
-}
-
-function SessionCard({
-  session,
-  onPress,
-  onPressNotThere,
-}: {
-  session: TimelineSession;
-  onPress: () => void;
-  onPressNotThere?: () => void;
-}) {
-  if (session.status === 'upcoming') {
-    return (
-      <Card style={styles.card}>
-        <View style={styles.sessionTitleRow}>
-          <View style={{ flex: 1, paddingRight: spacing.sm }}>
-            <Text variant="bodyBold">{session.title}</Text>
-            <Text variant="small" tone="muted" style={{ marginTop: 4 }}>
-              Information will be visible on class day
-            </Text>
-          </View>
-          <SessionTypeIcon />
-        </View>
-        <Pressable
-          onPress={onPressNotThere}
-          disabled={!onPressNotThere}
-          style={({ pressed }) => [styles.notHereRow, pressed && { opacity: 0.7 }]}
-        >
-          <Text variant="small" tone="secondary">
-            Not there on this day?
-          </Text>
-          <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-        </Pressable>
-      </Card>
-    );
-  }
-  if (session.status === 'missed') {
-    return (
-      <Card style={styles.card}>
-        <View style={styles.sessionTitleRow}>
-          <Chip label="Missed" tone="error" />
-          <SessionTypeIcon />
-        </View>
-        <Text variant="bodyBold" style={{ marginTop: spacing.sm }}>
-          {session.title}
-        </Text>
-      </Card>
-    );
-  }
-  return (
-    <Card onPress={onPress} style={styles.card}>
-      <View style={styles.sessionTitleRow}>
-        <View style={{ flex: 1, paddingRight: spacing.sm }}>
-          <Text variant="bodyBold">
-            {session.title}{' '}
-            <Text variant="small" tone="muted">
-              · Class {session.sessionNumber}
-            </Text>
-          </Text>
-        </View>
-        <SessionTypeIcon />
-      </View>
-      <Text variant="label" tone="muted" style={{ marginTop: spacing.sm }}>
-        Key concepts
-      </Text>
-      <View style={{ marginTop: 4 }}>
-        {session.keyConcepts.slice(0, 3).map((k) => (
-          <View key={k} style={styles.bulletRow}>
-            <View style={styles.bulletDot} />
-            <Text variant="small" tone="secondary" style={{ flex: 1 }}>
-              {k}
-            </Text>
-          </View>
-        ))}
-      </View>
-      <View style={styles.viewMore}>
-        <Text variant="small" tone="muted">
-          View more
-        </Text>
-        <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
-      </View>
-    </Card>
   );
 }
 
@@ -539,11 +487,6 @@ function PendingHwCard({ task, onPress }: { task: TimelineTask; onPress: () => v
   );
 }
 
-function formatShortDate(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
-}
-
 const DOT_SIZE = 14;
 const GUTTER = 28;
 
@@ -614,54 +557,38 @@ const styles = StyleSheet.create({
     borderRadius: DOT_SIZE / 2,
     backgroundColor: colors.warning,
   },
-  sessionTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-  },
-  sessionTypeIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.md,
-    backgroundColor: colors.surfaceAlt,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   content: {
     flex: 1,
-    paddingBottom: spacing.xl,
+    paddingBottom: spacing['2xl'],
     marginLeft: spacing.sm,
   },
-  card: {
-    marginTop: spacing.xs,
-  },
-  bulletRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginTop: 4,
-  },
-  bulletDot: {
-    width: 3,
-    height: 3,
-    borderRadius: 2,
-    backgroundColor: colors.textMuted,
-    marginTop: 9,
+  contentToday: {
+    backgroundColor: 'rgba(209, 141, 30, 0.06)',
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.lg,
     marginRight: spacing.sm,
   },
-  viewMore: {
+  dateRow: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
     alignItems: 'center',
-    marginTop: spacing.md,
+    marginBottom: spacing.xs,
   },
-  notHereRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: spacing.md,
-    paddingTop: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.divider,
+  dateLabel: {
+    letterSpacing: 0.3,
+  },
+  todayPill: {
+    backgroundColor: colors.warning,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: radius.sm,
+    marginRight: spacing.sm,
+  },
+  todayPillText: {
+    color: colors.textInverse,
+    fontWeight: '700',
+    letterSpacing: 0.6,
   },
   taskStack: {
     gap: spacing.sm,

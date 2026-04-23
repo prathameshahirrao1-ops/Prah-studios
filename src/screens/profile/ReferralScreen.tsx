@@ -254,11 +254,8 @@ const styles = StyleSheet.create({
   },
 
   fieldLabel: {
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-    fontWeight: '600',
     marginBottom: 4,
-  } as any,
+  },
   input: {
     borderWidth: 1,
     borderColor: colors.border,

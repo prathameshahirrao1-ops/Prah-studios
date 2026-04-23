@@ -14,14 +14,13 @@ import { mockArtworks, mockStudent } from '../data/mockStudent';
 import { mockStreaks, STREAK_LABEL, StreakType } from '../data/mockStreaks';
 import { explorerJourneys, currentJourney } from '../data/mockJourneys';
 import {
-  SKILL_COLORS,
-  SKILL_META,
   SKILL_ORDER,
   levelFor,
   mockSkills,
 } from '../data/mockSkills';
 import type { ProfileStackParamList } from '../navigation/ProfileStack';
 import { FullImagePopover } from './profile/FullImageView';
+import { SkillMap, segmentedRingStyle } from './profile/SkillMap';
 
 type Nav = NativeStackNavigationProp<ProfileStackParamList, 'ProfileMain'>;
 
@@ -99,65 +98,6 @@ export function ProfileScreen() {
       />
     </Screen>
   );
-}
-
-function SkillMap({ onTapSkill }: { onTapSkill: () => void }) {
-  const topRow = SKILL_ORDER.slice(0, 3);
-  const bottomRow = SKILL_ORDER.slice(3, 5);
-  return (
-    <Pressable
-      onPress={onTapSkill}
-      style={({ pressed }) => [styles.block, pressed && { opacity: 0.9 }]}
-    >
-      <View style={styles.blockHeader}>
-        <Text variant="label" tone="muted">Skills</Text>
-        <Text variant="caption" tone="muted">Tap for details</Text>
-      </View>
-      <View style={styles.olympicTop}>
-        {topRow.map((skill) => (
-          <SkillCircle key={skill} skill={skill} points={mockSkills.points[skill]} />
-        ))}
-      </View>
-      <View style={styles.olympicBottom}>
-        {bottomRow.map((skill) => (
-          <SkillCircle key={skill} skill={skill} points={mockSkills.points[skill]} />
-        ))}
-      </View>
-    </Pressable>
-  );
-}
-
-function SkillCircle({ skill, points }: { skill: string; points: number }) {
-  const meta = SKILL_META[skill as keyof typeof SKILL_META];
-  const color = SKILL_COLORS[skill as keyof typeof SKILL_COLORS];
-  return (
-    <View style={styles.skillCell}>
-      <View style={[styles.skillTile, { backgroundColor: `${color}18` }]}>
-        <Ionicons name={meta.icon as any} size={36} color={color} />
-        <Text variant="caption" style={{ color, fontWeight: '700', marginTop: 6, fontSize: 15 }}>{points}</Text>
-      </View>
-      <Text variant="caption" style={{ fontWeight: '600', textAlign: 'center', marginTop: 6 }} numberOfLines={2}>
-        {meta.name}
-      </Text>
-    </View>
-  );
-}
-
-function lightenHex(hex: string, amount: number): string {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  const lr = Math.min(255, r + Math.round((255 - r) * amount));
-  const lg = Math.min(255, g + Math.round((255 - g) * amount));
-  const lb = Math.min(255, b + Math.round((255 - b) * amount));
-  return `#${lr.toString(16).padStart(2, '0')}${lg.toString(16).padStart(2, '0')}${lb.toString(16).padStart(2, '0')}`;
-}
-
-function skillTileGradient(light: string, dark: string): object {
-  return {
-    // @ts-ignore
-    backgroundImage: `linear-gradient(145deg, ${light} 0%, ${dark} 100%)`,
-  };
 }
 
 function StreaksBlock() {
@@ -335,22 +275,6 @@ function ReferralCard({ onPress, onDismiss }: { onPress: () => void; onDismiss: 
   );
 }
 
-function segmentedRingStyle(points: Record<string, number>): object {
-  const total = SKILL_ORDER.reduce((s, k) => s + points[k], 0);
-  if (total === 0) return {};
-  let deg = 0;
-  const stops: string[] = [];
-  for (const skill of SKILL_ORDER) {
-    const end = deg + (points[skill] / total) * 360;
-    stops.push(`${SKILL_COLORS[skill]} ${Math.round(deg)}deg ${Math.round(end)}deg`);
-    deg = end;
-  }
-  return {
-    // @ts-ignore
-    backgroundImage: `conic-gradient(${stops.join(', ')})`,
-  } as object;
-}
-
 const styles = StyleSheet.create({
   scroll: {
     paddingHorizontal: spacing.lg,
@@ -434,38 +358,6 @@ const styles = StyleSheet.create({
     width: 1,
     backgroundColor: colors.divider,
     marginVertical: 2,
-  },
-
-  // Skills — Olympics circles
-  olympicTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  olympicBottom: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '66.67%',
-    alignSelf: 'center',
-    marginTop: spacing.sm,
-  },
-  skillCell: {
-    alignItems: 'center',
-    width: 80,
-  },
-  skillTile: {
-    width: 80,
-    height: 88,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
-  },
-  skillIconBg: {
-    width: 54,
-    height: 54,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 
   // Streaks

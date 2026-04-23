@@ -6,6 +6,7 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { Text } from '../../components/Text';
 import { ImagePlaceholder } from '../../components/ImagePlaceholder';
 import { colors, radius, spacing } from '../../theme';
+import { formatDate } from '../../utils/formatDate';
 import {
   LEVELS,
   SKILL_LEVEL_DESCRIPTIONS,
@@ -183,11 +184,6 @@ export function SkillDetailScreen() {
 function nextLevelName(currentIndex: number): string {
   const next = LEVELS[currentIndex + 1];
   return next ? next.name : 'max';
-}
-
-function formatDate(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
 }
 
 function webArcStyle(progress: number): object {

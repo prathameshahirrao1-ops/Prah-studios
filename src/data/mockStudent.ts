@@ -51,6 +51,15 @@ export interface Peer {
   artworks: Artwork[];
 }
 
+export interface Venue {
+  teacherName: string;      // e.g. "Meera T."
+  teacherVerified: boolean;
+  area: string;             // e.g. "Koregaon Park, Pune"
+  line1: string;            // short street line shown inline
+  schedule: string;         // "Sat + Sun · 10:00 am"
+  directionsUrl?: string;   // maps deep link (not wired in Pass 1)
+}
+
 export interface Student {
   id: string;
   firstName: string;
@@ -71,6 +80,7 @@ export interface Student {
     dueDate: string;
     estimateMin: number;
   };
+  venue: Venue;
 }
 
 export const mockStudent: Student = {
@@ -80,7 +90,7 @@ export const mockStudent: Student = {
   course: 'Drawing Foundation',
   courseId: 'course_drawing_foundation_q1_2026',
   joinedDate: 'Joined 21 March 2026',
-  classesAttended: 4,
+  classesAttended: 5,
   classesTotal: 24,
   hwSubmitted: 2,
   hwTotal: 4,
@@ -92,6 +102,13 @@ export const mockStudent: Student = {
     dueDate: '2026-04-17',
     estimateMin: 20,
   },
+  venue: {
+    teacherName: 'Meera T.',
+    teacherVerified: true,
+    area: 'Koregaon Park, Pune',
+    line1: 'Lane 5, near Bund Garden Road',
+    schedule: 'Sat + Sun · 10:00 am',
+  },
 };
 
 export const mockArtworks: Artwork[] = [
@@ -99,6 +116,7 @@ export const mockArtworks: Artwork[] = [
   { id: 'aw2', sessionNumber: 2, sessionTitle: 'Basic Shapes', date: '2026-04-04' },
   { id: 'aw3', sessionNumber: 3, sessionTitle: 'Shapes to Objects', date: '2026-04-11' },
   { id: 'aw4', sessionNumber: 4, sessionTitle: 'Sketching Shapes', date: '2026-04-14' },
+  { id: 'aw5', sessionNumber: 5, sessionTitle: 'Observation Basics', date: '2026-04-18' },
 ];
 
 /**
@@ -187,8 +205,15 @@ export const mockTimeline: TimelineSession[] = [
     sessionNumber: 5,
     date: '2026-04-18',
     title: 'Observation Basics',
-    status: 'upcoming',
-    keyConcepts: [],
+    status: 'attended',
+    keyConcepts: ['Looking with intent', 'Big shapes first', 'Negative space'],
+    hw: 'reviewed',
+    yourWorkId: 'aw5',
+    skills: [
+      { name: 'Observation', stars: 4 },
+      { name: 'Structure', stars: 3 },
+      { name: 'Expression', stars: 3 },
+    ],
   },
   {
     id: 's6',

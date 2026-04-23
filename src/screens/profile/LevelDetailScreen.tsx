@@ -6,6 +6,7 @@ import { useNavigation } from '@react-navigation/native';
 import { Text } from '../../components/Text';
 import { ImagePlaceholder } from '../../components/ImagePlaceholder';
 import { colors, radius, spacing } from '../../theme';
+import { formatDate } from '../../utils/formatDate';
 import {
   LEVEL_DESCRIPTIONS,
   LEVELS,
@@ -259,10 +260,6 @@ export function LevelDetailScreen() {
       </ScrollView>
     </SafeAreaView>
   );
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
 }
 
 const styles = StyleSheet.create({
