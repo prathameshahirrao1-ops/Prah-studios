@@ -221,7 +221,11 @@ export const mockTimeline: TimelineSession[] = [
     date: '2026-04-25',
     title: 'Observation — Still Life',
     status: 'upcoming',
-    keyConcepts: [],
+    keyConcepts: [
+      'Setting up a still-life scene',
+      'Sighting proportions with a pencil',
+      'Capturing simple shadows',
+    ],
   },
 ];
 

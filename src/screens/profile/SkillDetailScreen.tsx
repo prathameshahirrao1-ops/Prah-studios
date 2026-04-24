@@ -4,33 +4,43 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { Text } from '../../components/Text';
-import { ImagePlaceholder } from '../../components/ImagePlaceholder';
 import { colors, radius, spacing } from '../../theme';
 import { formatDate } from '../../utils/formatDate';
 import {
-  LEVELS,
+  SKILL_COLORS,
   SKILL_LEVEL_DESCRIPTIONS,
   SKILL_META,
-  SkillType,
-  levelFor,
-  mockSkills,
+  SKILL_ORDER,
+  totalPoints,
+  useSkillsState,
 } from '../../data/mockSkills';
 import type { ProfileStackParamList } from '../../navigation/ProfileStack';
 
+/**
+ * Per-skill detail page.
+ *
+ * Loop 3 model change: per-skill has NO sub-levels — only the OVERALL total
+ * is tiered (Doodler → Grandmaster). This screen shows raw points the skill
+ * has accumulated, its share of overall growth, the skill-behaviour ladder
+ * (read-only reference from SKILL_LEVEL_DESCRIPTIONS), and recent gains.
+ */
 export function SkillDetailScreen() {
   const navigation = useNavigation();
   const route = useRoute<RouteProp<ProfileStackParamList, 'SkillDetail'>>();
   const skill = route.params.skill;
 
+  const skills = useSkillsState();
   const meta = SKILL_META[skill];
-  const points = mockSkills.points[skill];
-  const level = levelFor(points);
-  const inLevel = points - level.min;
-  const levelSpan = level.max - level.min;
-  const toNext = level.max - points;
-  const currentDescription = SKILL_LEVEL_DESCRIPTIONS[skill][level.index];
+  const color = SKILL_COLORS[skill];
+  const points = skills.points[skill];
+  const total = totalPoints(skills);
+  const sharePct = total > 0 ? Math.round((points / total) * 100) : 0;
 
-  const entries = mockSkills.history
+  // Reference ladder of what the skill looks like at different stages.
+  // Pure copy — no tier math tied to per-skill points.
+  const stages = SKILL_LEVEL_DESCRIPTIONS[skill];
+
+  const entries = skills.history
     .filter((e) => e.skill === skill)
     .sort((a, b) => b.date.localeCompare(a.date));
 
@@ -50,98 +60,78 @@ export function SkillDetailScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll}>
-        {/* Hero card — big ring + level */}
+        {/* Hero — raw points + share of overall growth */}
         <View style={[styles.card, styles.heroCard]}>
-          <View style={[styles.bigRing, webArcStyle(inLevel / levelSpan)]}>
-            <View style={styles.bigRingInner}>
-              <Ionicons name={meta.icon as any} size={22} color={colors.textSecondary} />
-              <Text variant="numberLg" style={{ marginTop: 2 }}>
-                {points}
-              </Text>
-              <Text variant="caption" tone="muted">
-                / 500
-              </Text>
-            </View>
+          <View style={[styles.iconTile, { backgroundColor: `${color}18` }]}>
+            <Ionicons name={meta.icon as any} size={40} color={color} />
           </View>
-          <Text variant="display" style={{ marginTop: spacing.md, fontSize: 22, lineHeight: 28 }}>
-            Level {level.index + 1} · {level.name}
+          <Text variant="numberLg" style={{ marginTop: spacing.md, color }}>
+            {points}
           </Text>
-          <Text variant="small" tone="muted" style={{ marginTop: 2 }}>
-            {toNext > 0
-              ? `${toNext} points to ${nextLevelName(level.index)}`
-              : 'Highest level reached'}
+          <Text variant="small" tone="muted">
+            {meta.name} points earned
           </Text>
 
-          {/* Tier bar */}
-          <View style={styles.tierBar}>
-            {LEVELS.map((l) => {
-              const active = points >= l.min && points < l.max;
-              return (
-                <View
-                  key={l.name}
-                  style={[styles.tierSeg, active && styles.tierActive]}
-                >
-                  <Text
-                    variant="caption"
-                    tone={active ? 'primary' : 'muted'}
-                    style={{ fontWeight: active ? '600' : '400' }}
-                    numberOfLines={1}
-                  >
-                    {l.name}
-                  </Text>
-                </View>
-              );
-            })}
+          {/* Share-of-overall bar */}
+          <View style={styles.shareWrap}>
+            <View style={styles.shareRow}>
+              <Text variant="caption" tone="muted">
+                Share of overall growth
+              </Text>
+              <Text variant="caption" style={{ fontWeight: '700', color }}>
+                {sharePct}%
+              </Text>
+            </View>
+            <View style={styles.shareTrack}>
+              <View
+                style={[
+                  styles.shareFill,
+                  { width: `${sharePct}%` as any, backgroundColor: color },
+                ]}
+              />
+            </View>
+            <Text variant="caption" tone="muted" style={{ marginTop: spacing.xs }}>
+              Out of {total} total pts across all five skills.
+            </Text>
           </View>
         </View>
 
-        {/* Examples at each level */}
+        {/* What this skill looks like — reference ladder */}
         <View style={styles.card}>
           <Text variant="h3" style={{ marginBottom: 2 }}>
-            Examples at each level
+            What {meta.name.toLowerCase()} looks like
           </Text>
           <Text variant="small" tone="muted" style={{ marginBottom: spacing.md }}>
-            Reference drawings for {meta.name.toLowerCase()} at each tier.
+            A progression guide — not a per-skill level. Raw points grow with every class, HW, and sketchbook piece.
           </Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.examplesRow}
-          >
-            {LEVELS.map((l) => {
-              const isCurrent = l.index === level.index;
-              return (
+          <View style={styles.stagesList}>
+            {stages.map((desc, i) => (
+              <View
+                key={i}
+                style={[
+                  styles.stageRow,
+                  i === stages.length - 1 && { borderBottomWidth: 0 },
+                ]}
+              >
                 <View
-                  key={l.name}
                   style={[
-                    styles.exampleTile,
-                    isCurrent && styles.exampleTileCurrent,
+                    styles.stageDot,
+                    { backgroundColor: `${color}28`, borderColor: color },
                   ]}
                 >
-                  <ImagePlaceholder aspectRatio={1} rounded="md" />
                   <Text
                     variant="caption"
-                    style={{
-                      fontWeight: isCurrent ? '700' : '600',
-                      marginTop: 6,
-                      textAlign: 'center',
-                      color: isCurrent ? colors.warning : colors.textPrimary,
-                    }}
+                    style={{ fontWeight: '700', color }}
                   >
-                    L{l.index + 1} · {l.name}
-                  </Text>
-                  <Text
-                    variant="caption"
-                    tone="muted"
-                    style={{ textAlign: 'center', marginTop: 2 }}
-                    numberOfLines={3}
-                  >
-                    {SKILL_LEVEL_DESCRIPTIONS[skill][l.index]}
+                    {i + 1}
                   </Text>
                 </View>
-              );
-            })}
-          </ScrollView>
+                <Text variant="small" tone="secondary" style={{ flex: 1, lineHeight: 20 }}>
+                  {desc}
+                </Text>
+              </View>
+            ))}
+          </View>
         </View>
 
         {/* Recent gains */}
@@ -149,50 +139,47 @@ export function SkillDetailScreen() {
           <Text variant="h3" style={{ marginBottom: spacing.sm }}>
             Recent gains
           </Text>
-          {entries.map((e, i) => (
-            <View
-              key={e.id}
-              style={[
-                styles.historyRow,
-                i === entries.length - 1 && { borderBottomWidth: 0 },
-              ]}
-            >
-              <View style={styles.gainPill}>
-                <Text
-                  variant="caption"
-                  style={{ fontWeight: '700', color: colors.warning }}
+          {entries.length === 0 ? (
+            <Text variant="small" tone="muted" style={{ paddingVertical: spacing.sm }}>
+              No {meta.name.toLowerCase()} points yet. Attend a class, submit homework, or upload a sketchbook piece to start earning.
+            </Text>
+          ) : (
+            entries.map((e, i) => (
+              <View
+                key={e.id}
+                style={[
+                  styles.historyRow,
+                  i === entries.length - 1 && { borderBottomWidth: 0 },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.gainPill,
+                    { backgroundColor: `${color}22` },
+                  ]}
                 >
-                  +{e.amount}
+                  <Text
+                    variant="caption"
+                    style={{ fontWeight: '700', color }}
+                  >
+                    +{e.amount}
+                  </Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text variant="small" tone="primary">
+                    {e.source}
+                  </Text>
+                </View>
+                <Text variant="caption" tone="muted">
+                  {formatDate(e.date)}
                 </Text>
               </View>
-              <View style={{ flex: 1 }}>
-                <Text variant="small" tone="primary">
-                  {e.source}
-                </Text>
-              </View>
-              <Text variant="caption" tone="muted">
-                {formatDate(e.date)}
-              </Text>
-            </View>
-          ))}
+            ))
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
   );
-}
-
-function nextLevelName(currentIndex: number): string {
-  const next = LEVELS[currentIndex + 1];
-  return next ? next.name : 'max';
-}
-
-function webArcStyle(progress: number): object {
-  const p = Math.max(0, Math.min(1, progress));
-  const deg = Math.round(p * 360);
-  return {
-    // @ts-ignore — react-native-web passes this through as CSS
-    backgroundImage: `conic-gradient(${colors.warning} 0deg ${deg}deg, ${colors.border} ${deg}deg 360deg)`,
-  } as object;
 }
 
 const styles = StyleSheet.create({
@@ -236,50 +223,55 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xl,
   },
 
-  bigRing: {
-    width: 152,
-    height: 152,
-    borderRadius: 76,
-    backgroundColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bigRingInner: {
-    width: 128,
-    height: 128,
-    borderRadius: 64,
-    backgroundColor: colors.surface,
+  iconTile: {
+    width: 96,
+    height: 96,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
   },
 
-  tierBar: {
-    flexDirection: 'row',
-    gap: 4,
-    marginTop: spacing.md,
+  shareWrap: {
+    marginTop: spacing.lg,
     alignSelf: 'stretch',
   },
-  tierSeg: {
-    flex: 1,
-    paddingVertical: 6,
-    paddingHorizontal: 2,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surfaceAlt,
+  shareRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: spacing.xs,
   },
-  tierActive: {
-    backgroundColor: colors.warning,
+  shareTrack: {
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.surfaceAlt,
+    overflow: 'hidden',
+  },
+  shareFill: {
+    height: 8,
+    borderRadius: 4,
   },
 
-  examplesRow: {
-    gap: spacing.md,
-    paddingRight: spacing.md,
+  stagesList: {
+    gap: 0,
   },
-  exampleTile: {
-    width: 140,
+  stageRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.divider,
   },
-  exampleTileCurrent: {
-    // visual accent handled via text styling; keep wrapper minimal
+  stageDot: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+    marginTop: 2,
   },
 
   historyRow: {
@@ -295,7 +287,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: 3,
     borderRadius: radius.pill,
-    backgroundColor: 'rgba(209, 141, 30, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },

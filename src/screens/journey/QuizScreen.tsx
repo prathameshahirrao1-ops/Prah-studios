@@ -12,7 +12,11 @@ import { SKILL_META, SkillType } from '../../data/mockSkills';
 interface Props {
   quiz: Quiz;
   onClose: () => void;
-  onComplete: () => void;   // fired when user taps "Done" on result screen
+  /**
+   * Fired when user taps "Done" on the result screen. Receives the
+   * student's answers so the caller can credit points (Loop 3).
+   */
+  onComplete: (answers: Record<string, string>) => void;
 }
 
 /**
@@ -52,7 +56,7 @@ export function QuizScreen({ quiz, onClose, onComplete }: Props) {
         quiz={quiz}
         answers={answers}
         onClose={() => {
-          onComplete();
+          onComplete(answers);
           onClose();
         }}
       />
@@ -217,12 +221,14 @@ function ResultView({
   }).length;
   const total = quiz.questions.length;
 
+  // Keep in sync with creditQuizCompletion in mockQuizzes.ts: +2 pts per
+  // correct answer, credited to that question's skill.
   const pointsBySkill: Partial<Record<SkillType, number>> = {};
   for (const q of quiz.questions) {
     const a = answers[q.id];
     const correct = q.options.find((o) => o.id === a)?.isCorrect === true;
     if (correct) {
-      pointsBySkill[q.skill] = (pointsBySkill[q.skill] ?? 0) + 1;
+      pointsBySkill[q.skill] = (pointsBySkill[q.skill] ?? 0) + 2;
     }
   }
   const skillsEarned = Object.keys(pointsBySkill) as SkillType[];

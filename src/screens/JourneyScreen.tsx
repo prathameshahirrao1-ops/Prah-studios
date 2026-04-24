@@ -19,6 +19,8 @@ import { PeersTab } from './journey/PeersTab';
 import { MyWorkTab } from './journey/MyWorkTab';
 import { SessionPopup } from './journey/SessionPopup';
 import { PeerPopup } from './journey/PeerPopup';
+import { SessionSummaryPopup } from '../components/SessionSummaryPopup';
+import { sessionAwardsFor } from '../data/mockSessions';
 import {
   HwSubmissionPopup,
   HwSubmissionContext,
@@ -27,9 +29,16 @@ import { QuizScreen } from './journey/QuizScreen';
 import { GkCarouselScreen } from './journey/GkCarouselScreen';
 import { VenueCard } from './journey/VenueCard';
 import { FullImagePopover } from './profile/FullImageView';
-import { findQuizForTask, Quiz } from '../data/mockQuizzes';
-import { mockGkToday } from '../data/mockGkCarousel';
+import { creditQuizCompletion, findQuizForTask, Quiz } from '../data/mockQuizzes';
+import { creditGkCompletion, mockGkToday } from '../data/mockGkCarousel';
 import { ChatScreen } from './ChatScreen';
+import { SketchbookCTA } from './journey/SketchbookCTA';
+import { SketchbookUploadPopup } from './journey/SketchbookUploadPopup';
+import {
+  reviewsLeftThisWeek,
+  submitSketchbook,
+  useSketchbookState,
+} from '../data/mockSketchbook';
 
 type SubKey = 'timeline' | 'peers' | 'mywork';
 
@@ -43,6 +52,10 @@ export function JourneyScreen() {
   const s = mockStudent;
   const [active, setActive] = useState<SubKey>('timeline');
   const [sessionOpen, setSessionOpen] = useState<TimelineSession | null>(null);
+  // Post-class summary popup — Loop 1 re-open flow. Tapping any attended
+  // timeline session card opens the same summary the student saw post-class.
+  const [sessionSummaryOpen, setSessionSummaryOpen] =
+    useState<TimelineSession | null>(null);
   const [peerOpen, setPeerOpen] = useState<Peer | null>(null);
   const [hwOpen, setHwOpen] = useState<HwSubmissionContext | null>(null);
   // HW tasks (and their owning sessions) submitted during this browsing session.
@@ -61,6 +74,11 @@ export function JourneyScreen() {
   const [openArtworkId, setOpenArtworkId] = useState<string | null>(null);
   // Outer scroll ref — timeline auto-scrolls to today's row on first mount.
   const scrollRef = useRef<ScrollView>(null);
+
+  // Loop 4 — Sketchbook.
+  const sbState = useSketchbookState();
+  const sbReviewsLeft = reviewsLeftThisWeek(sbState);
+  const [sbUploadOpen, setSbUploadOpen] = useState(false);
 
   const openHwForTask = (t: TimelineTask) => {
     // Prefer the task's explicit sessionId; otherwise match by same-date attended session.
@@ -160,6 +178,11 @@ export function JourneyScreen() {
           </View>
 
           <VenueCard venue={s.venue} />
+
+          <SketchbookCTA
+            reviewsLeftThisWeek={sbReviewsLeft}
+            onPress={() => setSbUploadOpen(true)}
+          />
         </View>
 
         {/* Sticky sub-tabs */}
@@ -172,7 +195,16 @@ export function JourneyScreen() {
           {active === 'timeline' && (
             <TimelineTab
               scrollRef={scrollRef}
-              onTapSession={(sess) => setSessionOpen(sess)}
+              onTapSession={(sess) => {
+                // Loop 1: re-open the post-class summary for completed
+                // sessions. Upcoming/missed still open the legacy
+                // SessionPopup (peer works + concepts view) for now.
+                if (sess.status === 'attended') {
+                  setSessionSummaryOpen(sess);
+                } else {
+                  setSessionOpen(sess);
+                }
+              }}
               onTapHwTask={openHwForTask}
               onTapQuizTask={openQuizForTask}
               onTapGkTask={openGkForTask}
@@ -192,6 +224,14 @@ export function JourneyScreen() {
         session={sessionOpen}
         onClose={() => setSessionOpen(null)}
         onTapArtwork={(id) => setOpenArtworkId(id)}
+      />
+      <SessionSummaryPopup
+        session={sessionSummaryOpen}
+        awards={
+          sessionSummaryOpen ? sessionAwardsFor(sessionSummaryOpen.id) : {}
+        }
+        fresh={false}
+        onClose={() => setSessionSummaryOpen(null)}
       />
       <PeerPopup
         peer={peerOpen}
@@ -223,7 +263,9 @@ export function JourneyScreen() {
           <QuizScreen
             quiz={activeQuiz.quiz}
             onClose={() => setActiveQuiz(null)}
-            onComplete={() => {
+            onComplete={(answers) => {
+              // Loop 3: credit points for correct answers.
+              creditQuizCompletion(activeQuiz.quiz, answers);
               setCompletedQuizTaskIds((prev) => {
                 const next = new Set(prev);
                 next.add(activeQuiz.taskId);
@@ -239,6 +281,15 @@ export function JourneyScreen() {
         onClose={() => setOpenArtworkId(null)}
       />
 
+      <SketchbookUploadPopup
+        visible={sbUploadOpen}
+        reviewsLeftThisWeek={sbReviewsLeft}
+        onClose={() => setSbUploadOpen(false)}
+        onSubmit={({ photoUri, title }) => {
+          submitSketchbook({ photoUri, title });
+        }}
+      />
+
       <Modal
         visible={!!activeGkTaskId}
         animationType="slide"
@@ -250,6 +301,8 @@ export function JourneyScreen() {
             carousel={mockGkToday}
             onClose={() => setActiveGkTaskId(null)}
             onComplete={() => {
+              // Loop 3: credit +3 split across observation/creativity/problem_solving.
+              creditGkCompletion(mockGkToday);
               setCompletedGkTaskIds((prev) => {
                 const next = new Set(prev);
                 next.add(activeGkTaskId);

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -24,7 +24,7 @@ import { TeacherBlock } from './home/TeacherBlock';
 import { RecentWorkBlock } from './home/RecentWorkBlock';
 import { ExplorerJourneysBlock } from './home/ExplorerJourneysBlock';
 import { GkCarouselScreen } from './journey/GkCarouselScreen';
-import { mockGkToday } from '../data/mockGkCarousel';
+import { creditGkCompletion, mockGkToday } from '../data/mockGkCarousel';
 import { ChatScreen } from './ChatScreen';
 import { FullImagePopover } from './profile/FullImageView';
 import {
@@ -32,6 +32,32 @@ import {
   evaluateHomeState,
   HomeStateKey,
 } from '../data/homeState';
+import { SessionSummaryPopup } from '../components/SessionSummaryPopup';
+import { LevelUpPopup } from '../components/LevelUpPopup';
+import { HWReviewPopup } from '../components/HWReviewPopup';
+import { SketchbookReviewPopup } from '../components/SketchbookReviewPopup';
+import {
+  dismissSketchbookReview,
+  drainSketchbookCrossing,
+  sketchbookById,
+  useSketchbookState,
+} from '../data/mockSketchbook';
+import {
+  dismissSessionSummary,
+  drainPendingCrossing,
+  findSession,
+  sessionAwardsFor,
+  useSessionFlags,
+} from '../data/mockSessions';
+import {
+  activeHomework,
+  dismissHwReview,
+  drainHwCrossing,
+  homeworkById,
+  submitHomework,
+  useHomeworkState,
+} from '../data/mockHomework';
+import type { CrossedThreshold } from '../data/mockSkills';
 
 export function HomeScreen() {
   const s = mockStudent;
@@ -43,16 +69,81 @@ export function HomeScreen() {
   const [openArtworkId, setOpenArtworkId] = useState<string | null>(null);
   const rootNav = useNavigation<NavigationProp<RootTabParamList>>();
 
-  const homeCtx = useMemo(() => {
+  // Loop 1: post-class celebration. When DevStateSwitcher (or a server cron)
+  // flips a session to completed, `unseenCompletedSessionId` wakes us up and
+  // we open the SessionSummaryPopup. On close we drain any overall-level
+  // crossing and chain into LevelUpPopup.
+  const sessionFlags = useSessionFlags();
+  const unseenSession = sessionFlags.unseenCompletedSessionId
+    ? findSession(sessionFlags.unseenCompletedSessionId) ?? null
+    : null;
+  const [levelUp, setLevelUp] = useState<CrossedThreshold | null>(null);
+
+  // Loop 2: HW review celebration. When DevStateSwitcher (or the server)
+  // flips a submitted HW to reviewed, `unseenReviewHwId` is set and we open
+  // HWReviewPopup. On close we drain the HW-specific crossing and chain to
+  // LevelUpPopup (same pattern as the session-summary → level-up chain).
+  const hwState = useHomeworkState();
+  const unseenReviewHw = hwState.unseenReviewHwId
+    ? homeworkById(hwState.unseenReviewHwId) ?? null
+    : null;
+  const hwCard = activeHomework(hwState);
+
+  const handleSessionSummaryClose = () => {
+    dismissSessionSummary();
+    const crossed = drainPendingCrossing();
+    if (crossed) setLevelUp(crossed);
+  };
+
+  const handleHwReviewClose = () => {
+    dismissHwReview();
+    const crossed = drainHwCrossing();
+    if (crossed) setLevelUp(crossed);
+  };
+
+  // Loop 4: Sketchbook review celebration — same pattern.
+  const sbState = useSketchbookState();
+  const unseenSbPiece = sbState.unseenReviewId
+    ? sketchbookById(sbState.unseenReviewId) ?? null
+    : null;
+
+  const handleSketchbookReviewClose = () => {
+    dismissSketchbookReview();
+    const crossed = drainSketchbookCrossing();
+    if (crossed) setLevelUp(crossed);
+  };
+
+  const handleHwSubmitted = (payload: {
+    sessionId: string;
+    imageUri: string;
+    pushToCommunity: boolean;
+  }) => {
+    // Find the HW for this session and call the store. LevelUp chaining on
+    // submit is rare (participation only nets 10 pts) but we handle it anyway.
+    const hw = Object.values(hwState.hwById).find(
+      (h) => h.sessionId === payload.sessionId,
+    );
+    if (!hw) return;
+    const crossed = submitHomework(hw.id, payload.imageUri);
+    if (crossed) setLevelUp(crossed);
+  };
+
+  // Recompute on every render — cheap, and ensures session-store mutations
+  // (status flip via completeSession) are reflected without stale memo.
+  // `sessionFlags` is referenced so React knows Home re-renders when the
+  // session store changes.
+  void sessionFlags;
+  const homeCtx = (() => {
     if (forcedState === 'auto') return evaluateHomeState();
     const ctx = evaluateHomeState(DEV_PRESETS[forcedState]);
     return { ...ctx, state: forcedState };
-  }, [forcedState]);
+  })();
 
   const openHwPending = () => {
-    const pending = mockTimeline.find((t) => t.hw === 'pending');
-    if (!pending) return;
-    setHwOpen({ session: pending, currentHwStatus: 'pending' });
+    if (!hwCard) return;
+    const session = mockTimeline.find((t) => t.id === hwCard.sessionId);
+    if (!session) return;
+    setHwOpen({ session, currentHwStatus: session.hw ?? 'pending' });
   };
 
   const openHwForSession = (sessionId: string) => {
@@ -112,20 +203,31 @@ export function HomeScreen() {
           />
         )}
 
-        {homeCtx.state === 'hw_pending' && s.hwPending && (
+        {homeCtx.state === 'hw_pending' && hwCard && hwCard.status === 'pending' && (
           <Card style={styles.prioCard}>
             <View style={styles.prioHeader}>
               <Chip label="Homework" tone="warning" />
               <Text variant="small" tone="muted">
-                {formatHwDue(s.hwPending.dueDate, s.hwPending.estimateMin)}
+                {formatHwDue(hwCard.dueDate, hwCard.estimateMin)}
               </Text>
             </View>
             <Text variant="h2" style={{ marginTop: spacing.sm }}>
-              {s.hwPending.sessionTitle}
+              {hwCard.title}
             </Text>
             <Text variant="body" tone="secondary" style={{ marginTop: 4 }}>
-              Submit a photo of your drawing.
+              {hwCard.description}
             </Text>
+            {hwCard.onTimeBonusAvailable && (
+              <View style={styles.bonusChip}>
+                <Ionicons name="flash" size={14} color={colors.warning} />
+                <Text
+                  variant="caption"
+                  style={{ marginLeft: 4, fontWeight: '700' }}
+                >
+                  +5 on-time bonus
+                </Text>
+              </View>
+            )}
             <View style={styles.prioActions}>
               <Button label="Submit homework" onPress={openHwPending} />
             </View>
@@ -146,17 +248,18 @@ export function HomeScreen() {
         {/* ── HW inline nudge (only when HW is NOT the priority) ─────── */}
         {homeCtx.state !== 'hw_pending' &&
           homeCtx.state !== 'class_ongoing' &&
-          s.hwPending && (
+          hwCard &&
+          hwCard.status === 'pending' && (
             <Pressable onPress={openHwPending}>
               <Card compact>
                 <View style={styles.inlineHwRow}>
                   <View style={styles.hwDot} />
                   <View style={{ flex: 1 }}>
                     <Text variant="bodyBold">
-                      Homework pending · {s.hwPending.sessionTitle}
+                      Homework pending · {hwCard.title}
                     </Text>
                     <Text variant="small" tone="muted">
-                      {formatHwDue(s.hwPending.dueDate, s.hwPending.estimateMin)}
+                      {formatHwDue(hwCard.dueDate, hwCard.estimateMin)}
                     </Text>
                   </View>
                   <Ionicons
@@ -233,7 +336,11 @@ export function HomeScreen() {
         <View style={{ height: spacing['3xl'] }} />
       </ScrollView>
 
-      <HwSubmissionPopup context={hwOpen} onClose={() => setHwOpen(null)} />
+      <HwSubmissionPopup
+        context={hwOpen}
+        onClose={() => setHwOpen(null)}
+        onSubmitted={handleHwSubmitted}
+      />
 
       <Modal
         visible={gkOpen}
@@ -244,7 +351,10 @@ export function HomeScreen() {
         <GkCarouselScreen
           carousel={mockGkToday}
           onClose={() => setGkOpen(false)}
-          onComplete={() => {}}
+          onComplete={() => {
+            // Loop 3: credit +3 split across observation/creativity/problem_solving.
+            creditGkCompletion(mockGkToday);
+          }}
         />
       </Modal>
 
@@ -261,6 +371,24 @@ export function HomeScreen() {
         artworkId={openArtworkId}
         onClose={() => setOpenArtworkId(null)}
       />
+
+      <SessionSummaryPopup
+        session={unseenSession}
+        awards={
+          unseenSession ? sessionAwardsFor(unseenSession.id) : {}
+        }
+        fresh
+        onClose={handleSessionSummaryClose}
+      />
+
+      <HWReviewPopup hw={unseenReviewHw} onClose={handleHwReviewClose} />
+
+      <SketchbookReviewPopup
+        piece={unseenSbPiece}
+        onClose={handleSketchbookReviewClose}
+      />
+
+      <LevelUpPopup crossing={levelUp} onClose={() => setLevelUp(null)} />
     </Screen>
   );
 }
@@ -314,6 +442,16 @@ const styles = StyleSheet.create({
     borderColor: colors.surface,
   },
   prioCard: {},
+  bonusChip: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: radius.pill,
+    backgroundColor: `${colors.warning}1A`,
+  },
   prioHeader: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -9,12 +9,13 @@ import { colors, radius, spacing } from '../../theme';
 import { formatDate } from '../../utils/formatDate';
 import {
   LEVEL_DESCRIPTIONS,
-  LEVELS,
+  LEVEL_LADDER,
   SKILL_COLORS,
   SKILL_META,
   SKILL_ORDER,
-  levelFor,
-  mockSkills,
+  overallLevelFor,
+  totalPoints,
+  useSkillsState,
 } from '../../data/mockSkills';
 
 const GAINS_INITIAL = 6;
@@ -23,14 +24,27 @@ export function LevelDetailScreen() {
   const navigation = useNavigation();
   const [gainsSheetOpen, setGainsSheetOpen] = useState(false);
 
-  const total = SKILL_ORDER.reduce((sum, k) => sum + mockSkills.points[k], 0);
-  const level = levelFor(total);
-  const toNext = level.max - total;
-  const inLevel = total - level.min;
-  const levelSpan = level.max - level.min;
-  const fillPct = Math.min(100, Math.round((inLevel / levelSpan) * 100));
+  const skills = useSkillsState();
+  const total = totalPoints(skills);
+  const overall = overallLevelFor(total);
 
-  const allEntries = [...mockSkills.history].sort((a, b) => b.date.localeCompare(a.date));
+  // Progress is shown within the CURRENT SUB-LEVEL, not the full tier.
+  // Sub-level spans are short (100-1100 pts) so the bar feels responsive
+  // every 1-2 weeks, per Loop 3 spec.
+  const subSpan = overall.subEnd - overall.subStart;
+  const fillPct =
+    !isFinite(subSpan) || subSpan <= 0
+      ? 100
+      : Math.min(100, Math.round((overall.pointsIntoSub / subSpan) * 100));
+
+  const nextTier = LEVEL_LADDER[overall.tierIndex + 1];
+  const nextLabel = overall.subLevel === null
+    ? 'Highest tier reached'
+    : overall.subLevel < 3
+      ? `${overall.pointsToNextSub} pts to ${overall.tier} · ${overall.subLevel + 1}`
+      : `${overall.pointsToNextTier} pts to ${nextTier?.tier ?? 'max'}`;
+
+  const allEntries = [...skills.history].sort((a, b) => b.date.localeCompare(a.date));
   const visibleEntries = allEntries.slice(0, GAINS_INITIAL);
   const remainingEntries = allEntries.slice(GAINS_INITIAL);
   const hasMore = remainingEntries.length > 0;
@@ -50,30 +64,30 @@ export function LevelDetailScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll}>
-        {/* Hero — storage-style card */}
+        {/* Hero — tier + sub-level card */}
         <View style={styles.card}>
           <View style={styles.heroTopRow}>
             <View>
               <Text variant="label" tone="muted">
-                Level {level.index + 1} · {level.name} Artist
+                {overall.displayName}
               </Text>
               <Text variant="numberLg" style={{ marginTop: 4 }}>{total}</Text>
               <Text variant="small" tone="muted">
-                {toNext > 0
-                  ? `${toNext} pts to ${LEVELS[level.index + 1]?.name ?? 'max'}`
-                  : 'Highest level reached'}
+                {nextLabel}
               </Text>
             </View>
             <View style={styles.levelBadgeLg}>
-              <Text variant="h2" style={{ color: colors.warning }}>L{level.index + 1}</Text>
+              <Text variant="h2" style={{ color: colors.warning }}>
+                {overall.subLevel === null ? 'GM' : `${overall.tierIndex + 1}·${overall.subLevel}`}
+              </Text>
             </View>
           </View>
 
-          {/* Progress bar for current level */}
+          {/* Progress bar — fills as Aarav earns pts in current sub-level. */}
           <View style={styles.segBar}>
             <View style={[styles.segBarFilled, { width: `${fillPct}%` as any }]}>
               {SKILL_ORDER.map((skill) => {
-                const pct = total > 0 ? (mockSkills.points[skill] / total) * 100 : 0;
+                const pct = total > 0 ? (skills.points[skill] / total) * 100 : 0;
                 return (
                   <View
                     key={skill}
@@ -98,7 +112,7 @@ export function LevelDetailScreen() {
                   {SKILL_META[skill].name}
                 </Text>
                 <Text variant="small" style={{ fontWeight: '700', color: SKILL_COLORS[skill] }}>
-                  {mockSkills.points[skill]}
+                  {skills.points[skill]}
                 </Text>
               </View>
             ))}
@@ -184,18 +198,22 @@ export function LevelDetailScreen() {
             Each level unlocks deeper skills and more expressive work.
           </Text>
 
-          {LEVELS.map((l, i) => {
-            const isActive = level.index === l.index;
-            const isPast = l.index < level.index;
+          {LEVEL_LADDER.map((tierCfg, i) => {
+            const isActive = overall.tierIndex === i;
+            const isPast = i < overall.tierIndex;
+            const ptsToUnlockNext =
+              LEVEL_LADDER[i + 1]
+                ? LEVEL_LADDER[i + 1].cumulativeStart - tierCfg.cumulativeStart
+                : 0;
             return (
-              <View key={l.name} style={styles.storyItem}>
-                {/* Level header */}
+              <View key={tierCfg.tier} style={styles.storyItem}>
+                {/* Tier header */}
                 <View style={styles.storyLevelHeader}>
                   <View style={[styles.storyBadge, isActive && styles.storyBadgeActive, isPast && styles.storyBadgePast]}>
                     {isPast
                       ? <Ionicons name="checkmark" size={14} color={colors.textMuted} />
                       : <Text variant="caption" style={{ fontWeight: '700', color: isActive ? colors.warning : colors.textMuted }}>
-                          L{i + 1}
+                          {i + 1}
                         </Text>
                     }
                   </View>
@@ -205,12 +223,12 @@ export function LevelDetailScreen() {
                         variant="small"
                         style={{ fontWeight: '700', color: isActive ? colors.textPrimary : isPast ? colors.textMuted : colors.textSecondary }}
                       >
-                        {l.name} Artist
+                        {tierCfg.tier}
                       </Text>
                       {isActive && (
                         <View style={styles.youAreHereChip}>
                           <Text variant="caption" style={{ color: colors.warning, fontWeight: '600' }}>
-                            You're here
+                            You're here · {overall.displayName}
                           </Text>
                         </View>
                       )}
@@ -221,7 +239,7 @@ export function LevelDetailScreen() {
                   </View>
                 </View>
 
-                {/* Example drawings for this level */}
+                {/* Example drawings for this tier */}
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
@@ -242,12 +260,12 @@ export function LevelDetailScreen() {
                   ))}
                 </ScrollView>
 
-                {/* Connector line between levels (except last) */}
-                {i < LEVELS.length - 1 && (
+                {/* Connector line between tiers (except last) */}
+                {i < LEVEL_LADDER.length - 1 && (
                   <View style={styles.storyConnector}>
                     <View style={[styles.storyConnectorLine, isPast && styles.storyConnectorLinePast]} />
                     <Text variant="caption" tone="muted" style={styles.storyConnectorLabel}>
-                      +{LEVELS[i + 1].min - l.min} pts to unlock
+                      +{ptsToUnlockNext} pts to unlock
                     </Text>
                   </View>
                 )}

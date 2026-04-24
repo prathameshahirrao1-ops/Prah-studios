@@ -15,8 +15,9 @@ import { mockStreaks, STREAK_LABEL, StreakType } from '../data/mockStreaks';
 import { explorerJourneys, currentJourney } from '../data/mockJourneys';
 import {
   SKILL_ORDER,
-  levelFor,
-  mockSkills,
+  overallLevelFor,
+  totalPoints,
+  useSkillsState,
 } from '../data/mockSkills';
 import type { ProfileStackParamList } from '../navigation/ProfileStack';
 import { FullImagePopover } from './profile/FullImageView';
@@ -30,8 +31,9 @@ export function ProfileScreen() {
   const [openArtworkId, setOpenArtworkId] = useState<string | null>(null);
   const [referralDismissed, setReferralDismissed] = useState(false);
 
-  const total = SKILL_ORDER.reduce((sum, k) => sum + mockSkills.points[k], 0);
-  const overall = levelFor(total);
+  const skills = useSkillsState();
+  const total = totalPoints(skills);
+  const overall = overallLevelFor(total);
 
   return (
     <Screen padded={false}>
@@ -51,7 +53,7 @@ export function ProfileScreen() {
           <View style={styles.headerContent}>
             <Pressable
               onPress={() => navigation.navigate('LevelDetail')}
-              style={[styles.avatarRing, segmentedRingStyle(mockSkills.points)]}
+              style={[styles.avatarRing, segmentedRingStyle(skills.points, total)]}
             >
               <View style={styles.avatar}>
                 <Text variant="display" tone="inverse">
@@ -62,7 +64,7 @@ export function ProfileScreen() {
             <View style={styles.headerText}>
               <Text variant="display">{s.firstName}</Text>
               <Text variant="body" tone="secondary" style={{ marginTop: 2 }}>
-                {overall.name} Artist · Level {overall.index + 1}
+                {overall.displayName}
               </Text>
               <Text variant="caption" tone="muted" style={{ marginTop: 2 }}>
                 {s.joinedDate}

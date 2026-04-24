@@ -4,10 +4,31 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text } from '../../components/Text';
 import { colors, radius, spacing } from '../../theme';
 import { HomeStateKey } from '../../data/homeState';
+import {
+  completeSession,
+  nextUpcomingSession,
+} from '../../data/mockSessions';
+import {
+  nextReviewableHw,
+  nextSubmittableHw,
+  reviewHomework,
+  submitHomework,
+  useHomeworkState,
+} from '../../data/mockHomework';
+import {
+  nextReviewableSketchbook,
+  reviewSketchbook,
+  submitSketchbook,
+  useSketchbookState,
+} from '../../data/mockSketchbook';
 
 /**
  * Dev-only chip at the top of Home — lets us demo all four home states
  * without waiting for real clock time. Will be removed before production.
+ *
+ * Loop 1 extension: "Complete next session" action simulates the server
+ * flipping the next upcoming session to `completed`, crediting curriculum
+ * skill points, and firing the post-class popup on next Home render.
  */
 export function DevStateSwitcher({
   active,
@@ -25,6 +46,50 @@ export function DevStateSwitcher({
     { key: 'hw_pending', label: 'Homework pending' },
     { key: 'enrolled_idle', label: 'Between classes' },
   ];
+
+  // Subscribe to HW + Sketchbook stores so action labels/disabled states
+  // update live as the student moves through each loop's state machine.
+  useHomeworkState();
+  useSketchbookState();
+
+  const next = nextUpcomingSession();
+  const canComplete = !!next;
+
+  const submittable = nextSubmittableHw();
+  const reviewable = nextReviewableHw();
+  const sbReviewable = nextReviewableSketchbook();
+
+  const onCompleteNext = () => {
+    if (!next) return;
+    completeSession(next.id);
+    setOpen(false);
+  };
+
+  const onSubmitHw = () => {
+    if (!submittable) return;
+    submitHomework(submittable.id, '__mock_photo__');
+    setOpen(false);
+  };
+
+  const onReviewHw = () => {
+    if (!reviewable) return;
+    reviewHomework(reviewable.id);
+    setOpen(false);
+  };
+
+  const onSubmitSketchbook = () => {
+    submitSketchbook({
+      photoUri: '__mock_photo__',
+      title: 'Dev sketch',
+    });
+    setOpen(false);
+  };
+
+  const onReviewSketchbook = () => {
+    if (!sbReviewable) return;
+    reviewSketchbook(sbReviewable.id);
+    setOpen(false);
+  };
 
   return (
     <View style={styles.wrap}>
@@ -45,6 +110,14 @@ export function DevStateSwitcher({
 
       {open && (
         <View style={styles.menu}>
+          {/* State presets */}
+          <Text
+            variant="caption"
+            tone="muted"
+            style={styles.menuHeader}
+          >
+            STATE
+          </Text>
           {OPTIONS.map((o) => (
             <Pressable
               key={o.key}
@@ -67,6 +140,127 @@ export function DevStateSwitcher({
               </Text>
             </Pressable>
           ))}
+
+          <View style={styles.divider} />
+
+          {/* Simulation actions */}
+          <Text
+            variant="caption"
+            tone="muted"
+            style={styles.menuHeader}
+          >
+            SIMULATE
+          </Text>
+          <Pressable
+            onPress={onCompleteNext}
+            disabled={!canComplete}
+            style={({ pressed }) => [
+              styles.menuItem,
+              !canComplete && { opacity: 0.45 },
+              pressed && canComplete && { opacity: 0.8 },
+            ]}
+          >
+            <View style={styles.actionRow}>
+              <Ionicons
+                name="play-forward-outline"
+                size={14}
+                color={colors.textPrimary}
+              />
+              <Text variant="small" style={{ marginLeft: spacing.xs }}>
+                {canComplete
+                  ? `Complete Session ${next!.sessionNumber}`
+                  : 'No upcoming sessions'}
+              </Text>
+            </View>
+          </Pressable>
+
+          <Pressable
+            onPress={onSubmitHw}
+            disabled={!submittable}
+            style={({ pressed }) => [
+              styles.menuItem,
+              !submittable && { opacity: 0.45 },
+              pressed && submittable && { opacity: 0.8 },
+            ]}
+          >
+            <View style={styles.actionRow}>
+              <Ionicons
+                name="cloud-upload-outline"
+                size={14}
+                color={colors.textPrimary}
+              />
+              <Text variant="small" style={{ marginLeft: spacing.xs }}>
+                {submittable
+                  ? `Submit Session ${submittable.sessionNumber} HW`
+                  : 'No HW to submit'}
+              </Text>
+            </View>
+          </Pressable>
+
+          <Pressable
+            onPress={onReviewHw}
+            disabled={!reviewable}
+            style={({ pressed }) => [
+              styles.menuItem,
+              !reviewable && { opacity: 0.45 },
+              pressed && reviewable && { opacity: 0.8 },
+            ]}
+          >
+            <View style={styles.actionRow}>
+              <Ionicons
+                name="ribbon-outline"
+                size={14}
+                color={colors.textPrimary}
+              />
+              <Text variant="small" style={{ marginLeft: spacing.xs }}>
+                {reviewable
+                  ? `Review Session ${reviewable.sessionNumber} HW`
+                  : 'No HW to review'}
+              </Text>
+            </View>
+          </Pressable>
+
+          <Pressable
+            onPress={onSubmitSketchbook}
+            style={({ pressed }) => [
+              styles.menuItem,
+              pressed && { opacity: 0.8 },
+            ]}
+          >
+            <View style={styles.actionRow}>
+              <Ionicons
+                name="color-palette-outline"
+                size={14}
+                color={colors.textPrimary}
+              />
+              <Text variant="small" style={{ marginLeft: spacing.xs }}>
+                Add Sketchbook piece
+              </Text>
+            </View>
+          </Pressable>
+
+          <Pressable
+            onPress={onReviewSketchbook}
+            disabled={!sbReviewable}
+            style={({ pressed }) => [
+              styles.menuItem,
+              !sbReviewable && { opacity: 0.45 },
+              pressed && sbReviewable && { opacity: 0.8 },
+            ]}
+          >
+            <View style={styles.actionRow}>
+              <Ionicons
+                name="sparkles-outline"
+                size={14}
+                color={colors.textPrimary}
+              />
+              <Text variant="small" style={{ marginLeft: spacing.xs }}>
+                {sbReviewable
+                  ? `Review Sketchbook: "${sbReviewable.title}"`
+                  : 'No Sketchbook to review'}
+              </Text>
+            </View>
+          </Pressable>
         </View>
       )}
     </View>
@@ -109,12 +303,18 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: radius.md,
     paddingVertical: spacing.xs,
-    minWidth: 180,
+    minWidth: 220,
     shadowColor: '#000',
     shadowOpacity: 0.08,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
     elevation: 4,
+  },
+  menuHeader: {
+    letterSpacing: 0.6,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.xs,
+    paddingBottom: 2,
   },
   menuItem: {
     paddingVertical: spacing.sm,
@@ -122,5 +322,14 @@ const styles = StyleSheet.create({
   },
   menuItemActive: {
     backgroundColor: colors.primary,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: colors.divider,
+    marginVertical: spacing.xs,
   },
 });
