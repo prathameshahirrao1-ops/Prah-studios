@@ -9,7 +9,8 @@
  *   4  Empty / Enrolled active   default — engagement zone dominant
  */
 
-import { mockStudent, mockTimeline, TimelineSession } from './mockStudent';
+import { mockTimeline, TimelineSession } from './mockStudent';
+import { activeHomework } from './mockHomework';
 
 export type HomeStateKey =
   | 'class_ongoing'
@@ -37,8 +38,11 @@ function isBetween(now: Date, start: Date, end: Date) {
  */
 export function evaluateHomeState(now: Date = new Date()): HomeContext {
   // Find the session whose start-time window the clock is in.
+  // Skip already-attended sessions — once Loop 1 flips a session to
+  // 'attended' (e.g. via Dev · Complete Session N), it's no longer live.
   for (const s of mockTimeline) {
     if (!s.date) continue;
+    if (s.status === 'attended') continue;
     const start = startOfSession(s);
     const end = new Date(start.getTime() + CLASS_DURATION_MIN * 60 * 1000);
     if (isBetween(now, start, end)) {
@@ -58,8 +62,10 @@ export function evaluateHomeState(now: Date = new Date()): HomeContext {
     }
   }
 
-  // Any HW still pending?
-  if (mockStudent.hwPending) {
+  // Any HW still pending? Reads the reactive HW store so that after submit
+  // the priority moves off hw_pending automatically.
+  const hw = activeHomework();
+  if (hw && hw.status === 'pending') {
     return { state: 'hw_pending', nextSession: nextUpcoming(now) };
   }
 

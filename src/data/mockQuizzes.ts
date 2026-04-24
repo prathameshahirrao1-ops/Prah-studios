@@ -2,7 +2,13 @@
  * Mock quiz data. One quiz per session, 3 visual-compare questions each.
  * Backend wiring: `quizzes/{quizId}/questions/{qId}` in Firestore.
  */
-import { SkillType } from './mockSkills';
+import {
+  creditPoints,
+  CrossedThreshold,
+  getSkillsState,
+  setSkillsState,
+  SkillType,
+} from './mockSkills';
 
 export interface QuizOption {
   id: string;
@@ -81,4 +87,36 @@ export function findQuizForTask(
     return mockQuizzes[0] ?? null;
   }
   return mockQuizzes.find((q) => q.sessionId === taskSessionId) ?? mockQuizzes[0] ?? null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Credit points on quiz completion.
+// Rule (per docs/loops.md §Loop 3 point sources): +2 per correct answer,
+// credited to that question's skill. 3 questions × 2 pts = up to 6 pts
+// per quiz, spread across the skills the teacher targeted in this quiz.
+// ─────────────────────────────────────────────────────────────────────────────
+export function creditQuizCompletion(
+  quiz: Quiz,
+  answers: Record<string, string>,
+): CrossedThreshold | null {
+  const deltas: Partial<Record<SkillType, number>> = {};
+  let correct = 0;
+  for (const q of quiz.questions) {
+    const picked = q.options.find((o) => o.id === answers[q.id]);
+    if (picked?.isCorrect) {
+      deltas[q.skill] = (deltas[q.skill] ?? 0) + 2;
+      correct++;
+    }
+  }
+  if (correct === 0) return null;
+
+  const { nextState, crossed } = creditPoints(getSkillsState(), {
+    source: `Quiz · Session ${quiz.sessionNumber} (${correct}/${quiz.questions.length} correct)`,
+    sourceType: 'daily_quiz',
+    deltas,
+    date: new Date().toISOString().slice(0, 10),
+    entryIdPrefix: `quiz-${quiz.id}`,
+  });
+  setSkillsState(nextState);
+  return crossed;
 }

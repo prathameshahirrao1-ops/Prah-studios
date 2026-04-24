@@ -3,6 +3,14 @@
  * Topics rotate through: Indian artists, art history, fundamentals, movements.
  */
 
+import {
+  creditPoints,
+  CrossedThreshold,
+  getSkillsState,
+  setSkillsState,
+  SkillType,
+} from './mockSkills';
+
 export interface GkItem {
   id: string;
   topic: string;         // short tag, e.g. "Indian art"
@@ -43,3 +51,28 @@ export const mockGkToday: GkCarousel = {
     },
   ],
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Credit points on GK carousel completion.
+// Rule (per docs/loops.md §Loop 3 point sources): +3 total, spread across
+// observation + creativity + problem_solving — the skills most fed by
+// "broadening what you see + connecting unrelated ideas".
+// ─────────────────────────────────────────────────────────────────────────────
+export function creditGkCompletion(
+  carousel: GkCarousel,
+): CrossedThreshold | null {
+  const deltas: Partial<Record<SkillType, number>> = {
+    observation: 1,
+    creativity: 1,
+    problem_solving: 1,
+  };
+  const { nextState, crossed } = creditPoints(getSkillsState(), {
+    source: `Daily GK · ${new Date().toLocaleDateString()}`,
+    sourceType: 'daily_carousel',
+    deltas,
+    date: new Date().toISOString().slice(0, 10),
+    entryIdPrefix: `gk-${carousel.id}-${new Date().toISOString().slice(0, 10)}`,
+  });
+  setSkillsState(nextState);
+  return crossed;
+}

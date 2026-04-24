@@ -7,8 +7,8 @@ import {
   SKILL_COLORS,
   SKILL_META,
   SKILL_ORDER,
-  levelFor,
-  mockSkills,
+  overallLevelFor,
+  useSkillsState,
 } from '../../data/mockSkills';
 
 interface Props {
@@ -16,11 +16,13 @@ interface Props {
 }
 
 export function SkillMap({ onTapSkill }: Props) {
+  const skills = useSkillsState();
+
   // Compute 14-day gain per skill to find the top gainer. Keeps the badge
   // meaningful on demo data where the latest evaluation may be ~10 days old.
   const cutoff = Date.now() - 14 * 24 * 60 * 60 * 1000;
   const gains: Record<string, number> = {};
-  for (const e of mockSkills.history) {
+  for (const e of skills.history) {
     if (new Date(e.date).getTime() < cutoff) continue;
     gains[e.skill] = (gains[e.skill] ?? 0) + e.amount;
   }
@@ -42,7 +44,7 @@ export function SkillMap({ onTapSkill }: Props) {
           <SkillCircle
             key={skill}
             skill={skill}
-            points={mockSkills.points[skill]}
+            points={skills.points[skill]}
             recentGain={skill === topGainerSkill ? topGainerAmount : 0}
           />
         ))}
@@ -84,21 +86,31 @@ function SkillCircle({
 
 /**
  * Segmented progress ring:
- *  - The TOTAL arc reflects progress through the current overall level
- *    (filled sweep = levelProgressPct × 360°, unfilled remainder = grey).
+ *  - The TOTAL arc reflects progress through the current OVERALL SUB-LEVEL
+ *    (e.g. Doodler · 2 → filled sweep = pointsIntoSub / subLevelCost × 360°).
  *  - Inside the filled sweep, each skill gets a sector proportional to its
  *    point contribution, so you can see which skills are pushing growth.
+ *  - At Grandmaster (no sub-levels), the ring is fully filled.
+ *
+ * Takes `total` so callers can avoid recomputing — it must equal the sum of
+ * `points`. When omitted, it is derived.
  */
-export function segmentedRingStyle(points: Record<string, number>): object {
-  const total = SKILL_ORDER.reduce((s, k) => s + points[k], 0);
-  if (total === 0) return { backgroundColor: colors.border };
-  const band = levelFor(total);
-  const levelProgress = (total - band.min) / (band.max - band.min);
-  const filledDeg = Math.max(12, Math.min(360, levelProgress * 360));
+export function segmentedRingStyle(
+  points: Record<string, number>,
+  total?: number,
+): object {
+  const totalPts =
+    total ?? SKILL_ORDER.reduce((s, k) => s + (points[k] ?? 0), 0);
+  if (totalPts === 0) return { backgroundColor: colors.border };
+  const overall = overallLevelFor(totalPts);
+  const subSpan = overall.subEnd - overall.subStart;
+  const subProgress =
+    !isFinite(subSpan) || subSpan <= 0 ? 1 : overall.pointsIntoSub / subSpan;
+  const filledDeg = Math.max(12, Math.min(360, subProgress * 360));
   let deg = 0;
   const stops: string[] = [];
   for (const skill of SKILL_ORDER) {
-    const share = points[skill] / total;
+    const share = (points[skill] ?? 0) / totalPts;
     const end = deg + share * filledDeg;
     stops.push(`${SKILL_COLORS[skill]} ${deg.toFixed(2)}deg ${end.toFixed(2)}deg`);
     deg = end;
