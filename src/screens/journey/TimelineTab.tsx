@@ -20,7 +20,7 @@ import {
   mockTasks,
   mockTimeline,
 } from '../../data/mockStudent';
-import { mockStreaks } from '../../data/mockStreaks';
+import { useStreaksData } from '../../data/mockStreaks';
 import { StreakFooter } from '../../components/StreakFooter';
 import { formatDateWithWeekday } from '../../utils/formatDate';
 import { TimelineSessionCard } from './TimelineSessionCard';
@@ -374,6 +374,7 @@ function TaskCard({
   onPressGk: () => void;
   celebrate?: boolean;
 }) {
+  const streaks = useStreaksData();
   // Pending HW gets a richer, more actionable card.
   if (task.kind === 'hw' && !task.done) {
     return <PendingHwCard task={task} onPress={onPressHw} />;
@@ -403,7 +404,7 @@ function TaskCard({
   const showStreakFooter =
     !task.done && (task.kind === 'quiz' || task.kind === 'gk');
   const streakCount =
-    task.kind === 'quiz' ? mockStreaks.quiz : mockStreaks.gk;
+    task.kind === 'quiz' ? streaks.quiz : streaks.gk;
 
   return (
     <Pressable
@@ -527,6 +528,7 @@ function CheckmarkBadge({ animate }: { animate: boolean }) {
 }
 
 function PendingHwCard({ task, onPress }: { task: TimelineTask; onPress: () => void }) {
+  const streaks = useStreaksData();
   return (
     <Card style={styles.hwPendingCard}>
       <View style={styles.hwHeader}>
@@ -546,7 +548,7 @@ function PendingHwCard({ task, onPress }: { task: TimelineTask; onPress: () => v
       <View style={{ marginTop: spacing.md }}>
         <Button label="Submit homework" size="sm" onPress={onPress} />
       </View>
-      <StreakFooter type="hw" count={mockStreaks.hw} />
+      <StreakFooter type="hw" count={streaks.hw} />
     </Card>
   );
 }
