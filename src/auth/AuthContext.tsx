@@ -23,8 +23,17 @@ import {
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { getAuthClient, getDb, isFirebaseConfigured } from '../firebase/config';
 
+/**
+ * Role gates which navigator tree the app shows after login.
+ *   student → student app (current screens: Journey, Home, Sketchbook, etc.)
+ *   teacher → teacher app (future: review homework, send feedback, etc.)
+ *   admin   → handled in a separate web app, but kept here so role is exhaustive
+ */
+export type UserRole = 'student' | 'teacher' | 'admin';
+
 export type StudentProfile = {
   uid: string;
+  role: UserRole;
   childName: string;
   age: number;
   parentName: string;
@@ -42,7 +51,7 @@ type AuthContextShape = {
   signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
-  saveProfile: (data: Omit<StudentProfile, 'uid' | 'parentEmail' | 'createdAt'>) => Promise<void>;
+  saveProfile: (data: Omit<StudentProfile, 'uid' | 'role' | 'parentEmail' | 'createdAt'>) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextShape | null>(null);
@@ -71,7 +80,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const snap = await getDoc(doc(getDb(), 'students', fbUser.uid));
         if (snap.exists()) {
-          setProfile({ uid: fbUser.uid, ...(snap.data() as Omit<StudentProfile, 'uid'>) });
+          const data = snap.data() as Omit<StudentProfile, 'uid'>;
+          // Backfill role for accounts created before role existed.
+          setProfile({ ...data, uid: fbUser.uid, role: data.role ?? 'student' });
           setStatus('ready');
         } else {
           setProfile(null);
@@ -105,8 +116,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const saveProfile: AuthContextShape['saveProfile'] = async (data) => {
     if (!user) throw new Error('not-signed-in');
+    // New self-serve accounts are always students. Teacher accounts are
+    // pre-seeded by us with role='teacher' (Path B / concierge).
     const payload: StudentProfile = {
       uid: user.uid,
+      role: 'student',
       parentEmail: user.email ?? '',
       ...data,
       createdAt: serverTimestamp(),
