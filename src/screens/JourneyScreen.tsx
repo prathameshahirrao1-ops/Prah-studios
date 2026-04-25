@@ -74,6 +74,9 @@ export function JourneyScreen() {
   const [openArtworkId, setOpenArtworkId] = useState<string | null>(null);
   // Outer scroll ref — timeline auto-scrolls to today's row on first mount.
   const scrollRef = useRef<ScrollView>(null);
+  // Y offset of the content area inside the outer ScrollView — needed so
+  // TimelineTab can calculate today's absolute Y before calling scrollTo.
+  const contentYOffset = useRef<number>(0);
 
   // Loop 4 — Sketchbook.
   const sbState = useSketchbookState();
@@ -191,10 +194,14 @@ export function JourneyScreen() {
         </View>
 
         {/* Content */}
-        <View style={styles.content}>
+        <View
+          style={styles.content}
+          onLayout={(e) => { contentYOffset.current = e.nativeEvent.layout.y; }}
+        >
           {active === 'timeline' && (
             <TimelineTab
               scrollRef={scrollRef}
+              contentYOffset={contentYOffset}
               onTapSession={(sess) => {
                 // Loop 1: re-open the post-class summary for completed
                 // sessions. Upcoming/missed still open the legacy

@@ -92,54 +92,12 @@ export function SketchbookReviewPopup({ piece, onClose }: Props) {
         </View>
       )}
 
-      {/* Star ratings */}
-      {Object.keys(review.skillRatings).length > 0 && (
-        <View>
-          <Text variant="label" tone="muted" style={{ marginBottom: spacing.sm }}>
-            Teacher's ratings
-          </Text>
-          <View style={styles.ratingList}>
-            {SKILL_ORDER.map((k) => {
-              const stars = review.skillRatings[k] ?? 0;
-              if (stars <= 0) return null;
-              const color = SKILL_COLORS[k];
-              const meta = SKILL_META[k];
-              return (
-                <View key={k} style={styles.ratingRow}>
-                  <View
-                    style={[
-                      styles.skillIcon,
-                      { backgroundColor: `${color}1A` },
-                    ]}
-                  >
-                    <Ionicons name={meta.icon as any} size={16} color={color} />
-                  </View>
-                  <Text variant="body" style={{ flex: 1 }}>
-                    {meta.name}
-                  </Text>
-                  <View style={styles.starsRow}>
-                    {[1, 2, 3, 4, 5].map((n) => (
-                      <Ionicons
-                        key={n}
-                        name={n <= stars ? 'star' : 'star-outline'}
-                        size={14}
-                        color={colors.warning}
-                      />
-                    ))}
-                  </View>
-                </View>
-              );
-            })}
-          </View>
-        </View>
-      )}
-
-      {/* Points gained */}
+      {/* Skills gained — points only, no stars. Chip shows X/15 (max review). */}
       {grandTotal > 0 && (
         <View>
           <View style={styles.sectionHeader}>
             <Text variant="label" tone="muted">
-              Skill points gained
+              Skills you grew
             </Text>
             <View style={styles.totalChip}>
               <Text
@@ -147,13 +105,10 @@ export function SketchbookReviewPopup({ piece, onClose }: Props) {
                 tone="inverse"
                 style={{ fontWeight: '700' }}
               >
-                +{grandTotal} pts
+                {grandTotal}/15
               </Text>
             </View>
           </View>
-          <Text variant="caption" tone="muted" style={{ marginBottom: spacing.sm }}>
-            Sketchbook pieces can earn up to 15 pts each.
-          </Text>
           <View style={styles.skillList}>
             {SKILL_ORDER.map((k: SkillType) => {
               const d = review.pointsAwarded[k] ?? 0;
@@ -173,12 +128,18 @@ export function SketchbookReviewPopup({ piece, onClose }: Props) {
                   <Text variant="body" style={{ flex: 1 }}>
                     {meta.name}
                   </Text>
-                  <Text variant="bodyBold" style={{ color }}>
+                  <Text variant="bodyBold" style={[styles.skillPts, { color }]}>
                     +{d}
                   </Text>
                 </View>
               );
             })}
+          </View>
+          <View style={styles.totalRow}>
+            <Text variant="small" tone="muted" style={{ flex: 1 }}>
+              Total awarded
+            </Text>
+            <Text variant="bodyBold">+{grandTotal} pts</Text>
           </View>
         </View>
       )}
@@ -231,24 +192,11 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     backgroundColor: colors.surfaceAlt,
   },
-  ratingList: {
-    gap: spacing.xs,
-  },
-  ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.xs,
-  },
-  starsRow: {
-    flexDirection: 'row',
-    gap: 2,
-  },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 2,
+    marginBottom: spacing.sm,
   },
   totalChip: {
     backgroundColor: colors.primary,
@@ -273,5 +221,17 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  skillPts: {
+    minWidth: 32,
+    textAlign: 'right',
+  },
+  totalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingTop: spacing.sm,
+    marginTop: spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: colors.divider,
   },
 });

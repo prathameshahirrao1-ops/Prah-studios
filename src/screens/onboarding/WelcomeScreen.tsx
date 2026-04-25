@@ -57,7 +57,7 @@ export function WelcomeScreen() {
 
   const goNext = () => {
     if (isLast) {
-      navigation.navigate('ProfileSetup');
+      navigation.navigate('SignIn');
       return;
     }
     const next = slide + 1;
@@ -114,7 +114,7 @@ export function WelcomeScreen() {
           style={styles.cta}
         />
         <Pressable
-          onPress={() => navigation.navigate('ProfileSetup')}
+          onPress={() => navigation.navigate('SignIn')}
           style={styles.signInRow}
           hitSlop={8}
         >

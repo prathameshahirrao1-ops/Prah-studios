@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   TextInput,
@@ -15,21 +14,40 @@ import { Text } from '../../components/Text';
 import { Button } from '../../components/Button';
 import { colors, radius, spacing } from '../../theme';
 import type { RootNavigatorParamList } from '../../navigation/RootNavigator';
+import { useAuth } from '../../auth/AuthContext';
 
 type Nav = NativeStackNavigationProp<RootNavigatorParamList, 'ProfileSetup'>;
 
-const AGE_OPTIONS = [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
-
 export function ProfileSetupScreen() {
   const navigation = useNavigation<Nav>();
-  const [childName, setChildName] = useState('');
-  const [age, setAge] = useState<number | null>(null);
-  const [parentName, setParentName] = useState('');
+  const { saveProfile, user } = useAuth();
+  const [name, setName] = useState('');
+  const [ageText, setAgeText] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const canSubmit = childName.trim().length > 0 && age !== null && parentName.trim().length > 0;
+  const ageNum = parseInt(ageText, 10);
+  const ageValid = !isNaN(ageNum) && ageNum > 0 && ageNum < 100;
+  const canSubmit = name.trim().length > 0 && ageValid && !busy;
 
-  const handleCreate = () => {
-    navigation.navigate('MainApp');
+  const handleCreate = async () => {
+    if (!canSubmit) return;
+    setError(null);
+    if (!user) {
+      navigation.navigate('MainApp');
+      return;
+    }
+    setBusy(true);
+    try {
+      await saveProfile({
+        childName: name.trim(),
+        age: ageNum,
+        parentName: name.trim(),
+      });
+    } catch (e: any) {
+      setError("Couldn't save profile. Please try again.");
+      setBusy(false);
+    }
   };
 
   return (
@@ -44,85 +62,57 @@ export function ProfileSetupScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.headingBlock}>
-            <Text variant="h1">Tell us about{'\n'}your child</Text>
+            <Text variant="h1">Let's set up{'\n'}your profile</Text>
             <Text variant="body" tone="secondary" style={{ marginTop: spacing.sm }}>
-              We'll personalise their journey from day one.
+              A couple of quick details to get you started.
             </Text>
           </View>
 
-          {/* Child name */}
+          {/* Name */}
           <View style={styles.fieldBlock}>
             <Text variant="label" tone="muted" style={styles.fieldLabel}>
-              Child's name
+              Your name
             </Text>
             <TextInput
               style={styles.input}
               placeholder="e.g. Aarav"
               placeholderTextColor={colors.textMuted}
-              value={childName}
-              onChangeText={setChildName}
+              value={name}
+              onChangeText={setName}
               returnKeyType="next"
               autoCapitalize="words"
             />
           </View>
 
-          {/* Age picker */}
+          {/* Age */}
           <View style={styles.fieldBlock}>
             <Text variant="label" tone="muted" style={styles.fieldLabel}>
               Age
             </Text>
-            <View style={styles.agePills}>
-              {AGE_OPTIONS.map((a) => (
-                <Pressable
-                  key={a}
-                  onPress={() => setAge(a)}
-                  style={[styles.agePill, age === a && styles.agePillActive]}
-                >
-                  <Text
-                    variant="small"
-                    style={{
-                      fontWeight: '600',
-                      color: age === a ? colors.primaryText : colors.textPrimary,
-                    }}
-                  >
-                    {a}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          </View>
-
-          {/* Parent name */}
-          <View style={styles.fieldBlock}>
-            <Text variant="label" tone="muted" style={styles.fieldLabel}>
-              Your name (parent / guardian)
-            </Text>
             <TextInput
               style={styles.input}
-              placeholder="e.g. Prathamesh"
+              placeholder="e.g. 7"
               placeholderTextColor={colors.textMuted}
-              value={parentName}
-              onChangeText={setParentName}
+              value={ageText}
+              onChangeText={(t) => setAgeText(t.replace(/[^0-9]/g, ''))}
+              keyboardType="number-pad"
+              maxLength={2}
               returnKeyType="done"
-              autoCapitalize="words"
             />
           </View>
+
+          {error && (
+            <Text variant="small" style={{ color: '#B3261E' }}>
+              {error}
+            </Text>
+          )}
 
           <View style={styles.actions}>
             <Button
-              label="Create profile"
+              label={busy ? 'Saving…' : 'Create profile'}
               onPress={handleCreate}
               disabled={!canSubmit}
             />
-            <Pressable
-              onPress={() => navigation.navigate('MainApp')}
-              style={styles.skipRow}
-              hitSlop={8}
-            >
-              <Text variant="small" tone="muted">
-                Skip for now
-              </Text>
-            </Pressable>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -159,29 +149,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.textPrimary,
   },
-  agePills: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  agePill: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  agePillActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
   actions: {
     gap: spacing.md,
     marginTop: spacing.sm,
-  },
-  skipRow: {
-    alignSelf: 'center',
-    paddingVertical: spacing.xs,
   },
 });

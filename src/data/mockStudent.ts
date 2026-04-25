@@ -227,6 +227,18 @@ export const mockTimeline: TimelineSession[] = [
       'Capturing simple shadows',
     ],
   },
+  {
+    id: 's7',
+    sessionNumber: 7,
+    date: '2026-05-02',
+    title: 'Light & Shadow Basics',
+    status: 'upcoming',
+    keyConcepts: [
+      'Light direction & form',
+      'Hatching for shadow',
+      'Soft vs hard edges',
+    ],
+  },
 ];
 
 export const mockTasks: TimelineTask[] = [
