@@ -54,7 +54,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // If Firebase isn't configured (dev preview, no env), stay signed-out.
-    // The DEV_SKIP_ONBOARDING flag in RootNavigator still works.
     if (!isFirebaseConfigured()) {
       setStatus('signed-out');
       return;
