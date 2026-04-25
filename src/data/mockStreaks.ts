@@ -1,7 +1,12 @@
 /**
- * Streak + reward mock data.
- * Replaced with Firestore reads at the backend-wiring milestone.
+ * Streak + reward state.
+ *
+ * Path: students/{uid}/streaks/current  (single doc, like skillState)
+ *
+ * Pub-sub store mirroring `mockSkills` so screens can subscribe via
+ * `useStreaksData()` and re-render when the bridge hydrates from Firestore.
  */
+import { useEffect, useReducer } from 'react';
 
 export type StreakType = 'hw' | 'quiz' | 'gk';
 
@@ -40,3 +45,31 @@ export const STREAK_LABEL: Record<StreakType, string> = {
   quiz: 'Quiz streak',
   gk: 'Daily streak',
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Live store + subscription hook (same pattern as mockSkills).
+// ─────────────────────────────────────────────────────────────────────────────
+
+let _streaksState: StreakData = mockStreaks;
+const _streaksSubscribers = new Set<() => void>();
+
+export function getStreaksData(): StreakData {
+  return _streaksState;
+}
+
+export function setStreaksData(next: StreakData) {
+  _streaksState = next;
+  _streaksSubscribers.forEach((fn) => fn());
+}
+
+/** Reactive read — re-renders the caller on every setStreaksData. */
+export function useStreaksData(): StreakData {
+  const [, force] = useReducer((n: number) => n + 1, 0);
+  useEffect(() => {
+    _streaksSubscribers.add(force);
+    return () => {
+      _streaksSubscribers.delete(force);
+    };
+  }, []);
+  return _streaksState;
+}

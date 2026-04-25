@@ -20,7 +20,6 @@ import { LiveClassCard } from './home/LiveClassCard';
 import { PostClassCard } from './home/PostClassCard';
 import { DevStateSwitcher } from './home/DevStateSwitcher';
 import { NextClassCard } from './home/NextClassCard';
-import { TeacherBlock } from './home/TeacherBlock';
 import { RecentWorkBlock } from './home/RecentWorkBlock';
 import { ExplorerJourneysBlock } from './home/ExplorerJourneysBlock';
 import { GkCarouselScreen } from './journey/GkCarouselScreen';
@@ -248,6 +247,7 @@ export function HomeScreen() {
         {/* ── HW inline nudge (only when HW is NOT the priority) ─────── */}
         {homeCtx.state !== 'hw_pending' &&
           homeCtx.state !== 'class_ongoing' &&
+          homeCtx.state !== 'post_class' &&
           hwCard &&
           hwCard.status === 'pending' && (
             <Pressable onPress={openHwPending}>
@@ -271,11 +271,6 @@ export function HomeScreen() {
               </Card>
             </Pressable>
           )}
-
-        {/* ── Teacher block ──────────────────────────────────────────── */}
-        {homeCtx.state !== 'class_ongoing' && (
-          <TeacherBlock onTap={() => setChatOpen(true)} />
-        )}
 
         {/* ── Recent work / proof of learning ────────────────────────── */}
         {homeCtx.state !== 'class_ongoing' && (

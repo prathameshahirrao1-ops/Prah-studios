@@ -154,54 +154,15 @@ export function HWReviewPopup({ hw, onClose }: Props) {
         </View>
       )}
 
-      {/* Star ratings */}
-      {Object.keys(review.skillRatings).length > 0 && (
-        <View>
-          <Text variant="label" tone="muted" style={{ marginBottom: spacing.sm }}>
-            Teacher's ratings
-          </Text>
-          <View style={styles.ratingList}>
-            {SKILL_ORDER.map((k) => {
-              const stars = review.skillRatings[k] ?? 0;
-              if (stars <= 0) return null;
-              const color = SKILL_COLORS[k];
-              const meta = SKILL_META[k];
-              return (
-                <View key={k} style={styles.ratingRow}>
-                  <View
-                    style={[
-                      styles.skillIcon,
-                      { backgroundColor: `${color}1A` },
-                    ]}
-                  >
-                    <Ionicons name={meta.icon as any} size={16} color={color} />
-                  </View>
-                  <Text variant="body" style={{ flex: 1 }}>
-                    {meta.name}
-                  </Text>
-                  <View style={styles.starsRow}>
-                    {[1, 2, 3, 4, 5].map((n) => (
-                      <Ionicons
-                        key={n}
-                        name={n <= stars ? 'star' : 'star-outline'}
-                        size={14}
-                        color={colors.warning}
-                      />
-                    ))}
-                  </View>
-                </View>
-              );
-            })}
-          </View>
-        </View>
-      )}
-
-      {/* Points gained */}
+      {/* Skills gained — stars + points in one merged row per skill.
+          Header shows teacher's review marks out of 20 (max 4 pts per skill).
+          Participation + on-time bonuses live as pills below — they're
+          automatic, not part of the grade. */}
       {grandTotal > 0 && (
         <View>
           <View style={styles.sectionHeader}>
             <Text variant="label" tone="muted">
-              Skill points gained
+              Skills you grew
             </Text>
             <View style={styles.totalChip}>
               <Text
@@ -209,40 +170,16 @@ export function HWReviewPopup({ hw, onClose }: Props) {
                 tone="inverse"
                 style={{ fontWeight: '700' }}
               >
-                +{grandTotal} pts
+                {reviewTotal}/20
               </Text>
             </View>
           </View>
 
-          {/* Breakdown chips */}
-          <View style={styles.breakdownRow}>
-            {participationTotal > 0 && (
-              <BreakdownPill
-                icon="checkmark-circle-outline"
-                label="Participation"
-                value={participationTotal}
-              />
-            )}
-            {onTimeTotal > 0 && (
-              <BreakdownPill
-                icon="time-outline"
-                label="On time"
-                value={onTimeTotal}
-              />
-            )}
-            {reviewTotal > 0 && (
-              <BreakdownPill
-                icon="ribbon-outline"
-                label="Review"
-                value={reviewTotal}
-              />
-            )}
-          </View>
-
+          {/* Per-skill: icon · name · +N (review points only — out of 4 each) */}
           <View style={styles.skillList}>
             {SKILL_ORDER.map((k) => {
-              const d = totals[k] ?? 0;
-              if (d <= 0) return null;
+              const reviewPts = review.pointsAwarded.reviewPoints[k] ?? 0;
+              if (reviewPts <= 0) return null;
               const color = SKILL_COLORS[k];
               const meta = SKILL_META[k];
               return (
@@ -258,12 +195,43 @@ export function HWReviewPopup({ hw, onClose }: Props) {
                   <Text variant="body" style={{ flex: 1 }}>
                     {meta.name}
                   </Text>
-                  <Text variant="bodyBold" style={{ color }}>
-                    +{d}
+                  <Text variant="bodyBold" style={[styles.skillPts, { color }]}>
+                    +{reviewPts}
                   </Text>
                 </View>
               );
             })}
+          </View>
+
+          {/* Already-awarded note — participation + on-time were credited
+              at submit time, not part of the teacher's /20 grade. */}
+          {(participationTotal > 0 || onTimeTotal > 0) && (
+            <View style={styles.alreadyAwardedBox}>
+              <Ionicons
+                name="checkmark-done"
+                size={14}
+                color={colors.textMuted}
+              />
+              <Text
+                variant="caption"
+                tone="muted"
+                style={{ flex: 1, marginLeft: spacing.xs }}
+              >
+                Already rewarded on submit:
+                {participationTotal > 0
+                  ? ` participation +${participationTotal}`
+                  : ''}
+                {participationTotal > 0 && onTimeTotal > 0 ? ' ·' : ''}
+                {onTimeTotal > 0 ? ` on time +${onTimeTotal}` : ''}
+              </Text>
+            </View>
+          )}
+
+          <View style={styles.totalRow}>
+            <Text variant="small" tone="muted" style={{ flex: 1 }}>
+              Total awarded
+            </Text>
+            <Text variant="bodyBold">+{grandTotal} pts</Text>
           </View>
         </View>
       )}
@@ -375,19 +343,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     backgroundColor: colors.surfaceAlt,
   },
-  ratingList: {
-    gap: spacing.xs,
-  },
-  ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.xs,
-  },
-  starsRow: {
-    flexDirection: 'row',
-    gap: 2,
-  },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -400,11 +355,26 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: radius.pill,
   },
-  breakdownRow: {
+  alreadyAwardedBox: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.xs,
-    marginBottom: spacing.sm,
+    alignItems: 'center',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    marginTop: spacing.sm,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceAlt,
+  },
+  totalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingTop: spacing.sm,
+    marginTop: spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: colors.divider,
+  },
+  skillPts: {
+    minWidth: 32,
+    textAlign: 'right',
   },
   pill: {
     flexDirection: 'row',

@@ -39,3 +39,9 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Graphify generated outputs
+graphify-out/
+
+# Claude session lock
+.claude/scheduled_tasks.lock

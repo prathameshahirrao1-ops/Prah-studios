@@ -8,6 +8,7 @@ import { Text } from '../../components/Text';
 import { Card } from '../../components/Card';
 import { colors, spacing } from '../../theme';
 import type { ProfileStackParamList } from '../../navigation/ProfileStack';
+import { useAuth } from '../../auth/AuthContext';
 
 type Nav = NativeStackNavigationProp<ProfileStackParamList, 'Settings'>;
 
@@ -27,10 +28,19 @@ const ROWS: {
 
 export function SettingsScreen() {
   const navigation = useNavigation<Nav>();
+  const { signOut } = useAuth();
+
+  const doLogout = async () => {
+    try {
+      await signOut();
+    } catch (err) {
+      console.warn('[auth] sign out failed', err);
+    }
+  };
 
   const onRowPress = (key: string, route?: keyof ProfileStackParamList) => {
     if (key === 'logout') {
-      confirmLogout();
+      confirmLogout(doLogout);
       return;
     }
     if (route) {
@@ -82,19 +92,17 @@ export function SettingsScreen() {
   );
 }
 
-function confirmLogout() {
+function confirmLogout(onConfirm: () => void) {
   // web Alert.alert is sync — we keep it simple for both platforms.
   if (Platform.OS === 'web') {
     // eslint-disable-next-line no-alert
     const ok = typeof window !== 'undefined' && window.confirm('Log out of Prah Studio?');
-    if (ok) {
-      // real build: clear storage + navigate to onboarding
-    }
+    if (ok) onConfirm();
     return;
   }
   Alert.alert('Logout', 'Log out of Prah Studio?', [
     { text: 'Cancel', style: 'cancel' },
-    { text: 'Logout', style: 'destructive', onPress: () => {} },
+    { text: 'Logout', style: 'destructive', onPress: onConfirm },
   ]);
 }
 

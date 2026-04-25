@@ -6,7 +6,7 @@
       "runtimeExecutable": "sh",
       "runtimeArgs": [
         "-c",
-        "cd /Users/prathamesh.ahirrao/Downloads/Prah-Studio/repos/Prah-studios/.claude/worktrees/unruffled-hofstadter-76c338 && CI=1 EXPO_NO_TELEMETRY=1 npx expo start --web --port 8082"
+        "cd /Users/prathamesh.ahirrao/Downloads/Prah-Studio/repos/Prah-studios/.claude/worktrees/unruffled-hofstadter-76c338 && CI=1 EXPO_NO_TELEMETRY=1 EXPO_NO_LAZY=1 npx expo start --web --port 8082 --clear"
       ],
       "port": 8082
     }

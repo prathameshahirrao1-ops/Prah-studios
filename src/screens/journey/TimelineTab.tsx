@@ -20,7 +20,7 @@ import {
   mockTasks,
   mockTimeline,
 } from '../../data/mockStudent';
-import { mockStreaks } from '../../data/mockStreaks';
+import { useStreaksData } from '../../data/mockStreaks';
 import { StreakFooter } from '../../components/StreakFooter';
 import { formatDateWithWeekday } from '../../utils/formatDate';
 import { TimelineSessionCard } from './TimelineSessionCard';
@@ -38,6 +38,8 @@ interface Props {
   onTapNotThere?: (session: TimelineSession) => void;
   /** Parent scroll view — timeline auto-scrolls to today's row on first mount. */
   scrollRef?: React.RefObject<ScrollView | null>;
+  /** Y offset of the timeline container within the outer ScrollView. */
+  contentYOffset?: React.RefObject<number>;
 }
 
 /**
@@ -49,10 +51,12 @@ interface Props {
  * original `done` flag so the task stays on today once moved (even after
  * submitting in-session via the HW popup).
  */
+type TaggedTask = TimelineTask & { rolledForward: boolean };
+
 type DayGroup = {
   date: string;
   session?: TimelineSession;
-  tasks: TimelineTask[];
+  tasks: TaggedTask[];
 };
 
 function buildDayGroups(today: string): DayGroup[] {
@@ -71,9 +75,9 @@ function buildDayGroups(today: string): DayGroup[] {
   }
 
   for (const t of mockTasks) {
-    const rollForward = !t.done && t.date < today;
-    const targetDate = rollForward ? today : t.date;
-    get(targetDate).tasks.push(t);
+    const rolledForward = !t.done && t.date < today;
+    const targetDate = rolledForward ? today : t.date;
+    get(targetDate).tasks.push({ ...t, rolledForward });
   }
 
   return Array.from(map.values()).sort((a, b) => a.date.localeCompare(b.date));
@@ -88,24 +92,28 @@ export function TimelineTab({
   justSubmittedHwTaskId,
   onTapNotThere,
   scrollRef,
+  contentYOffset,
 }: Props) {
   const today = new Date().toISOString().slice(0, 10);
   const groups = buildDayGroups(today);
-  const didScrollRef = useRef(false);
-  const todayYRef = useRef<number | null>(null);
 
-  // Capture today's row Y via onLayout. Once it's measured we scroll the
-  // outer ScrollView to it, leaving a small peek above so history is hinted.
+  // Scroll to today's row.
+  // The row Y includes an 18px connector line above the dot — skip it so the
+  // TODAY label snaps to the top. Subtract 12px for a tiny context sliver.
+  // A 120ms delay ensures contentYOffset (set by JourneyScreen's onLayout) is
+  // written before we read it — avoids a layout-order race on web.
+  const CONNECTOR_H = 18;
   const handleTodayLayout = (e: LayoutChangeEvent) => {
-    todayYRef.current = e.nativeEvent.layout.y;
-    if (didScrollRef.current) return;
-    const scrollView = scrollRef?.current;
-    if (!scrollView) return;
-    didScrollRef.current = true;
-    scrollView.scrollTo({
-      y: Math.max(0, e.nativeEvent.layout.y - 40),
-      animated: false,
-    });
+    const rowY = e.nativeEvent.layout.y;
+    setTimeout(() => {
+      const scrollView = scrollRef?.current;
+      if (!scrollView) return;
+      const parentY = contentYOffset?.current ?? 0;
+      scrollView.scrollTo({
+        y: Math.max(0, parentY + rowY + CONNECTOR_H - 12),
+        animated: true,
+      });
+    }, 120);
   };
 
   return (
@@ -210,26 +218,82 @@ function TimelineRow({
         )}
 
         {group.tasks.length > 0 && (
-          <View style={styles.taskStack}>
-            {group.tasks.map((t) => {
-              const doneOverride = extraCompletedTaskIds?.has(t.id)
-                ? true
-                : t.done;
-              const celebrate = t.id === justSubmittedHwTaskId;
-              return (
-                <TaskCard
-                  key={t.id}
-                  task={{ ...t, done: doneOverride }}
-                  onPressHw={() => onTapHwTask(t)}
-                  onPressQuiz={() => onTapQuizTask(t)}
-                  onPressGk={() => onTapGkTask(t)}
-                  celebrate={celebrate}
-                />
-              );
-            })}
-          </View>
+          <TaskStack
+            tasks={group.tasks}
+            split={isToday}
+            extraCompletedTaskIds={extraCompletedTaskIds}
+            justSubmittedHwTaskId={justSubmittedHwTaskId}
+            onTapHwTask={onTapHwTask}
+            onTapQuizTask={onTapQuizTask}
+            onTapGkTask={onTapGkTask}
+          />
         )}
       </View>
+    </View>
+  );
+}
+
+/**
+ * Renders the task list for a day group.
+ * When `split` is true (today only) and any task is rolled-forward, splits
+ * into "From earlier" + "New today" sections. Otherwise flat list.
+ */
+function TaskStack({
+  tasks,
+  split,
+  extraCompletedTaskIds,
+  justSubmittedHwTaskId,
+  onTapHwTask,
+  onTapQuizTask,
+  onTapGkTask,
+}: {
+  tasks: TaggedTask[];
+  split: boolean;
+  extraCompletedTaskIds?: Set<string>;
+  justSubmittedHwTaskId?: string | null;
+  onTapHwTask: (t: TimelineTask) => void;
+  onTapQuizTask: (t: TimelineTask) => void;
+  onTapGkTask: (t: TimelineTask) => void;
+}) {
+  const renderTask = (t: TaggedTask) => (
+    <TaskCard
+      key={t.id}
+      task={{ ...t, done: extraCompletedTaskIds?.has(t.id) || t.done }}
+      onPressHw={() => onTapHwTask(t)}
+      onPressQuiz={() => onTapQuizTask(t)}
+      onPressGk={() => onTapGkTask(t)}
+      celebrate={t.id === justSubmittedHwTaskId}
+    />
+  );
+
+  const carried = split ? tasks.filter((t) => t.rolledForward) : [];
+  // Flat list when not splitting or no carry-overs.
+  if (carried.length === 0) {
+    return <View style={styles.taskStack}>{tasks.map(renderTask)}</View>;
+  }
+
+  const fresh = tasks.filter((t) => !t.rolledForward);
+  return (
+    <View style={styles.taskStack}>
+      <SectionLabel icon="time-outline" label="From earlier" />
+      <View style={styles.carriedStack}>{carried.map(renderTask)}</View>
+      {fresh.length > 0 && (
+        <>
+          <SectionLabel icon="sparkles-outline" label="New today" />
+          <View style={styles.taskStack}>{fresh.map(renderTask)}</View>
+        </>
+      )}
+    </View>
+  );
+}
+
+function SectionLabel({ icon, label }: { icon: 'time-outline' | 'sparkles-outline'; label: string }) {
+  return (
+    <View style={styles.sectionLabelRow}>
+      <Ionicons name={icon} size={12} color={colors.textMuted} />
+      <Text variant="caption" tone="muted" style={styles.sectionLabel}>
+        {label}
+      </Text>
     </View>
   );
 }
@@ -310,6 +374,7 @@ function TaskCard({
   onPressGk: () => void;
   celebrate?: boolean;
 }) {
+  const streaks = useStreaksData();
   // Pending HW gets a richer, more actionable card.
   if (task.kind === 'hw' && !task.done) {
     return <PendingHwCard task={task} onPress={onPressHw} />;
@@ -339,7 +404,7 @@ function TaskCard({
   const showStreakFooter =
     !task.done && (task.kind === 'quiz' || task.kind === 'gk');
   const streakCount =
-    task.kind === 'quiz' ? mockStreaks.quiz : mockStreaks.gk;
+    task.kind === 'quiz' ? streaks.quiz : streaks.gk;
 
   return (
     <Pressable
@@ -463,6 +528,7 @@ function CheckmarkBadge({ animate }: { animate: boolean }) {
 }
 
 function PendingHwCard({ task, onPress }: { task: TimelineTask; onPress: () => void }) {
+  const streaks = useStreaksData();
   return (
     <Card style={styles.hwPendingCard}>
       <View style={styles.hwHeader}>
@@ -482,7 +548,7 @@ function PendingHwCard({ task, onPress }: { task: TimelineTask; onPress: () => v
       <View style={{ marginTop: spacing.md }}>
         <Button label="Submit homework" size="sm" onPress={onPress} />
       </View>
-      <StreakFooter type="hw" count={mockStreaks.hw} />
+      <StreakFooter type="hw" count={streaks.hw} />
     </Card>
   );
 }
@@ -593,6 +659,21 @@ const styles = StyleSheet.create({
   taskStack: {
     gap: spacing.sm,
     marginTop: spacing.xs,
+  },
+  sectionLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  sectionLabel: {
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
+  },
+  carriedStack: {
+    gap: spacing.sm,
+    opacity: 0.78,
   },
   taskRow: {
     flexDirection: 'row',

@@ -11,7 +11,7 @@ import { ProgressBar } from '../components/ProgressBar';
 import { ImagePlaceholder } from '../components/ImagePlaceholder';
 import { colors, radius, spacing } from '../theme';
 import { mockArtworks, mockStudent } from '../data/mockStudent';
-import { mockStreaks, STREAK_LABEL, StreakType } from '../data/mockStreaks';
+import { STREAK_LABEL, StreakType, useStreaksData } from '../data/mockStreaks';
 import { explorerJourneys, currentJourney } from '../data/mockJourneys';
 import {
   SKILL_ORDER,
@@ -103,10 +103,11 @@ export function ProfileScreen() {
 }
 
 function StreaksBlock() {
+  const streaks = useStreaksData();
   const items: { type: StreakType; count: number }[] = [
-    { type: 'hw', count: mockStreaks.hw },
-    { type: 'quiz', count: mockStreaks.quiz },
-    { type: 'gk', count: mockStreaks.gk },
+    { type: 'hw', count: streaks.hw },
+    { type: 'quiz', count: streaks.quiz },
+    { type: 'gk', count: streaks.gk },
   ];
   return (
     <View style={styles.block}>
