@@ -1,3 +1,7 @@
+// Spec:
+//   - docs/spec/schema/artwork.md
+//
+
 /**
  * Loop 4 — Sketchbook.
  *

@@ -1,3 +1,7 @@
+// Spec:
+//   - docs/spec/schema/journey.md
+//
+
 import type { SkillType } from './mockSkills';
 
 export type JourneyCategory = 'explorer' | 'master';

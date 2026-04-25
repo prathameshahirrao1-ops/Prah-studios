@@ -1,3 +1,7 @@
+// Spec:
+//   - docs/spec/schema/artwork.md
+//
+
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';

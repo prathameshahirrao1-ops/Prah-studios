@@ -1,3 +1,8 @@
+// Spec:
+//   - docs/spec/schema/gk-carousel.md
+//   - docs/spec/rules/loop-3-gk-quiz.md
+//
+
 /**
  * Daily Art GK carousel — 3 items per day, admin-approved before going live.
  * Topics rotate through: Indian artists, art history, fundamentals, movements.

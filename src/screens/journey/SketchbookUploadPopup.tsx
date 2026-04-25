@@ -1,3 +1,8 @@
+// Spec:
+//   - docs/spec/ui-map/popups.md
+//   - docs/spec/schema/artwork.md
+//
+
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Image,

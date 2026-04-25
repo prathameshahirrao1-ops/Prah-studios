@@ -1,3 +1,7 @@
+// Spec:
+//   - docs/spec/schema/student.md
+//
+
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Card } from '../../components/Card';

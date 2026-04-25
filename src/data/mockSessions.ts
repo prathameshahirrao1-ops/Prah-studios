@@ -1,3 +1,8 @@
+// Spec:
+//   - docs/spec/schema/session.md
+//   - docs/spec/rules/loop-1-attendance.md
+//
+
 /**
  * Loop 1 — Class Attendance.
  *

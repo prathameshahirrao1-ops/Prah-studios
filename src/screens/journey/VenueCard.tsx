@@ -1,3 +1,7 @@
+// Spec:
+//   - docs/spec/schema/student.md
+//
+
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';

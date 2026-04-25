@@ -1,3 +1,8 @@
+// Spec:
+//   - docs/spec/ui-map/popups.md
+//   - docs/spec/schema/student.md
+//
+
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Popup } from '../../components/Popup';

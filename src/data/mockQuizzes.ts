@@ -1,3 +1,8 @@
+// Spec:
+//   - docs/spec/schema/quiz.md
+//   - docs/spec/rules/loop-3-gk-quiz.md
+//
+
 /**
  * Mock quiz data. One quiz per session, 3 visual-compare questions each.
  * Backend wiring: `quizzes/{quizId}/questions/{qId}` in Firestore.

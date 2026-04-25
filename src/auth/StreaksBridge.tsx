@@ -1,3 +1,8 @@
+// Spec:
+//   - docs/spec/schema/streak.md
+//   - docs/spec/rules/loop-4-streaks.md
+//
+
 /**
  * Bridges the in-memory streaks store with Firestore.
  *

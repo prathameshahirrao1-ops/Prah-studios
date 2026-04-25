@@ -1,3 +1,8 @@
+// Spec:
+//   - docs/spec/ui-map/timeline-tab.md
+//   - docs/spec/schema/session.md
+//
+
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';

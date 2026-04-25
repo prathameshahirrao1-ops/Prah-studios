@@ -1,3 +1,9 @@
+// Spec:
+//   - docs/spec/ui-map/popups.md
+//   - docs/spec/schema/homework.md
+//   - docs/spec/rules/loop-2-homework.md
+//
+
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Image,

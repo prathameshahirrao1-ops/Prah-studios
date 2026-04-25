@@ -1,3 +1,7 @@
+// Spec:
+//   - docs/spec/schema/student.md
+//
+
 /**
  * Home state machine — evaluates the student's current moment and picks
  * what the Home screen should render.

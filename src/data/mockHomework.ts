@@ -1,3 +1,8 @@
+// Spec:
+//   - docs/spec/schema/homework.md
+//   - docs/spec/rules/loop-2-homework.md
+//
+
 /**
  * Loop 2 — Homework.
  *

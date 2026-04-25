@@ -1,3 +1,8 @@
+// Spec:
+//   - docs/spec/ui-map/popups.md
+//   - docs/spec/schema/artwork.md
+//
+
 import React from 'react';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';

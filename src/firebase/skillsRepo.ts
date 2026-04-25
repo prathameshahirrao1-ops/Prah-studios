@@ -1,3 +1,7 @@
+// Spec:
+//   - docs/spec/schema/skill.md
+//
+
 /**
  * Skills repository — reads/writes the per-student SkillState to Firestore.
  *

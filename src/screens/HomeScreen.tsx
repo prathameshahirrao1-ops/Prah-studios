@@ -1,3 +1,7 @@
+// Spec:
+//   - docs/spec/ui-map/home-screen.md
+//
+
 import React, { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';

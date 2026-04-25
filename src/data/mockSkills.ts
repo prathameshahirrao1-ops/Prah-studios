@@ -1,3 +1,8 @@
+// Spec:
+//   - docs/spec/schema/skill.md
+//   - docs/spec/rules/loop-5-level-up.md
+//
+
 /**
  * Skill map — Loop 3 (shared endpoint).
  *

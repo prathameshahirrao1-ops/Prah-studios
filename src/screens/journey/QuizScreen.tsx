@@ -1,3 +1,8 @@
+// Spec:
+//   - docs/spec/schema/quiz.md
+//   - docs/spec/rules/loop-3-gk-quiz.md
+//
+
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';

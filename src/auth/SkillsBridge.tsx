@@ -1,3 +1,8 @@
+// Spec:
+//   - docs/spec/schema/skill.md
+//   - docs/spec/rules/loop-5-level-up.md
+//
+
 /**
  * Bridges the in-memory skills store with Firestore.
  *

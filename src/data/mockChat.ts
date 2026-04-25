@@ -1,3 +1,7 @@
+// Spec:
+//   - docs/spec/schema/chat.md
+//
+
 /**
  * Mock chat data for the in-app chat (one chat per enrolled student,
  * shared between parent, teacher, and admin).

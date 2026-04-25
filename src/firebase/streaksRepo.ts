@@ -1,3 +1,7 @@
+// Spec:
+//   - docs/spec/schema/streak.md
+//
+
 /**
  * Streaks repository — reads/writes the per-student StreakData to Firestore.
  *

@@ -1,3 +1,8 @@
+// Spec:
+//   - docs/spec/schema/skill.md
+//   - docs/spec/rules/loop-5-level-up.md
+//
+
 import React, { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';

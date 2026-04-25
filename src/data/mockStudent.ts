@@ -1,3 +1,9 @@
+// Spec:
+//   - docs/spec/schema/student.md
+//   - docs/spec/schema/session.md
+//   - docs/spec/schema/artwork.md
+//
+
 /**
  * Mock enrolled-student data for Pass 1.
  * Replaced with Firestore reads in Phase "Backend wiring" (weeks 5–7).

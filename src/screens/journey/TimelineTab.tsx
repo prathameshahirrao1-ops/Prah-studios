@@ -1,3 +1,9 @@
+// Spec:
+//   - docs/spec/ui-map/timeline-tab.md
+//   - docs/spec/schema/session.md
+//   - docs/spec/schema/homework.md
+//
+
 import React, { useEffect, useRef } from 'react';
 import {
   Animated,

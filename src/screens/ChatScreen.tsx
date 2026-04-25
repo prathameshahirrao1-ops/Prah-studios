@@ -1,3 +1,8 @@
+// Spec:
+//   - docs/spec/ui-map/chat-screen.md
+//   - docs/spec/schema/chat.md
+//
+
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   FlatList,

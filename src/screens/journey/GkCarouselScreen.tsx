@@ -1,3 +1,8 @@
+// Spec:
+//   - docs/spec/schema/gk-carousel.md
+//   - docs/spec/rules/loop-3-gk-quiz.md
+//
+
 import React, { useRef, useState } from 'react';
 import {
   NativeScrollEvent,

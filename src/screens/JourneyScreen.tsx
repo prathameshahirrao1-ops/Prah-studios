@@ -1,3 +1,7 @@
+// Spec:
+//   - docs/spec/ui-map/timeline-tab.md
+//
+
 import React, { useRef, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';

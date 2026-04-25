@@ -1,3 +1,8 @@
+// Spec:
+//   - docs/spec/ui-map/profile-screen.md
+//   - docs/spec/schema/skill.md
+//
+
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
